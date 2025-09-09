@@ -1,38 +1,26 @@
-<!-- File: index.html (Known‑Good: Viewer default, Admin via ?mode=admin) -->
+<!-- File: index.html (Viewer default; Admin via ?mode=admin) -->
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Webkit Options for Diesel Designs</title>
-    <script>
-      /* Simple branding config — paste your image URLs here */
-      const BRAND = {
-        // Full-width banner across the top:
-        bannerUrl: 'https://cdn.shopify.com/s/files/1/0659/3023/2034/files/LogowithWebsite_3b736bf3-8f06-4553-bed2-68878cd7395a.png?v=1757448093',
-        // Optional background image for the whole page (leave '' to disable):
-        backgroundUrl: ''
-      };
-tailwind={}; tailwind.config={ theme:{ extend:{ colors:{ brand:{ purple:'#8D6CE5' }}}}};</script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      .no-select{user-select:none;-webkit-user-select:none}
-      :root{ --brand:#8D6CE5; }
-      /* Deter saving */
-      body{-webkit-touch-callout:none}
-      img{-webkit-user-drag:none}
-      body.has-bg{ background-image: var(--page-bg); background-size: cover; background-position: center; background-attachment: fixed; }
+      :root { --brand: #8D6CE5; }
+      .no-select { user-select: none; -webkit-user-select: none; }
+      body { -webkit-touch-callout: none; }
+      img { -webkit-user-drag: none; }
     </style>
   </head>
   <body class="min-h-screen bg-zinc-50 text-zinc-900">
+    <!-- Header: centered logo + title; controls below -->
     <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b" style="border-color:var(--brand)">
       <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col gap-3">
-        <!-- Centered logo + title -->
         <div class="flex flex-col items-center justify-center gap-2">
           <img src="https://cdn.shopify.com/s/files/1/0659/3023/2034/files/LogowithWebsite_3b736bf3-8f06-4553-bed2-68878cd7395a.png?v=1757448093" alt="Diesel Designs" class="h-20 w-auto" />
           <h1 id="appTitle" class="text-2xl font-semibold tracking-tight text-center">Webkit Options</h1>
         </div>
-        <!-- Controls row -->
         <div class="flex items-center justify-between">
           <span id="status" class="text-xs text-zinc-500"></span>
           <div id="adminBar" class="hidden items-center gap-2">
@@ -45,8 +33,8 @@ tailwind={}; tailwind.config={ theme:{ extend:{ colors:{ brand:{ purple:'#8D6CE5
             <input id="fileInput" type="file" accept="image/*" multiple class="hidden" />
           </div>
           <div id="viewerBar" class="hidden items-center gap-2">
-            <div class="inline-flex rounded-xl border border-[color:var(--brand)] overflow-hidden">
-              <button id="gridBtn" class="px-3 py-2 text-sm bg-[color:var(--brand)]/10">Grid</button>
+            <div class="inline-flex rounded-xl border overflow-hidden" style="border-color:var(--brand)">
+              <button id="gridBtn" class="px-3 py-2 text-sm" style="background-color: color-mix(in srgb, var(--brand) 10%, transparent)">Grid</button>
               <button id="flipBtn" class="px-3 py-2 text-sm">Flipbook</button>
             </div>
           </div>
@@ -55,14 +43,14 @@ tailwind={}; tailwind.config={ theme:{ extend:{ colors:{ brand:{ purple:'#8D6CE5
     </header>
 
     <main class="max-w-6xl mx-auto px-4 py-4">
-      <!-- Admin UI (only visible when ?mode=admin) -->
+      <!-- ADMIN -->
       <section id="adminUI" class="hidden space-y-4">
         <div class="rounded-2xl border bg-white p-4">
           <h2 class="font-semibold mb-2">Add images</h2>
           <div id="dropzone" class="border-2 border-dashed rounded-2xl p-6 text-center text-sm text-zinc-500 bg-zinc-50">
             Drag & drop files here, or <span class="underline">click to browse</span>
           </div>
-          <p class="text-xs text-zinc-500 mt-2">Images only (JPG/PNG). Titles are editable below.</p>
+          <p class="text-xs text-zinc-500 mt-2">JPG/PNG images. Edit Title and Category below.</p>
         </div>
 
         <div id="itemsWrap" class="rounded-2xl border bg-white">
@@ -80,7 +68,7 @@ tailwind={}; tailwind.config={ theme:{ extend:{ colors:{ brand:{ purple:'#8D6CE5
         </div>
       </section>
 
-      <!-- Viewer UI (default) -->
+      <!-- VIEWER -->
       <section id="viewerUI" class="hidden space-y-4">
         <div id="banner" class="hidden p-3 rounded-xl border bg-amber-50 text-amber-900 text-sm"></div>
         <div id="note" class="p-3 rounded-xl border bg-zinc-100 text-zinc-800 text-sm">
@@ -100,7 +88,7 @@ tailwind={}; tailwind.config={ theme:{ extend:{ colors:{ brand:{ purple:'#8D6CE5
               <option value="5000">5s</option>
               <option value="8000">8s</option>
             </select>
-            <button id="playBtn" class="absolute right-2 bottom-2 bg-[color:var(--brand)] text-white hover:opacity-90 px-3 py-2 rounded-xl border border-[color:var(--brand)] shadow text-sm">Play</button>
+            <button id="playBtn" class="absolute right-2 bottom-2 text-white hover:opacity-90 px-3 py-2 rounded-xl border shadow text-sm" style="background:var(--brand); border-color:var(--brand)">Play</button>
           </div>
         </section>
       </section>
@@ -110,6 +98,7 @@ tailwind={}; tailwind.config={ theme:{ extend:{ colors:{ brand:{ purple:'#8D6CE5
       © <span id="year"></span> Diesel Designs
     </footer>
 
+    <!-- Admin item row template -->
     <template id="itemRowTpl">
       <div class="p-3 flex items-start gap-3">
         <img class="w-24 h-24 object-cover rounded-lg bg-zinc-100" />
@@ -125,37 +114,43 @@ tailwind={}; tailwind.config={ theme:{ extend:{ colors:{ brand:{ purple:'#8D6CE5
       </div>
     </template>
 
+    <!-- Lightbox overlay -->
+    <div id="lightbox" class="fixed inset-0 bg-black/80 backdrop-blur flex items-center justify-center p-4 z-50 hidden" onclick="closeLightbox()">
+      <button class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white border rounded-xl px-3 py-2" onclick="event.stopPropagation(); lbStep(-1)">‹</button>
+      <div class="max-w-7xl w-full" onclick="event.stopPropagation()">
+        <img id="lbImg" alt="Full image" class="mx-auto max-w-[90vw] max-h-[85vh] rounded-xl shadow" draggable="false" />
+        <div id="lbCaption" class="mt-2 text-center text-sm text-white/90"></div>
+      </div>
+      <button class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white border rounded-xl px-3 py-2" onclick="event.stopPropagation(); lbStep(1)">›</button>
+      <button class="absolute top-4 right-4 bg-white/90 hover:bg-white border rounded-xl px-3 py-2" onclick="event.stopPropagation(); closeLightbox()">Close</button>
+    </div>
+
     <script>
-      // ---------- Mode: default viewer; admin only if ?mode=admin ----------
+      // ---------- Mode ----------
       const params = new URLSearchParams(location.search);
       const mode = (params.get('mode')||'view').toLowerCase();
 
       // ---------- State ----------
-      const App = { items: [], view: 'grid', flat: [], title: 'Portfolio', filter: 'all' };
+      const App = { items: [], view: 'grid', flat: [], title: 'Webkit Options', filter: 'all' };
       const $ = (s,r=document)=>r.querySelector(s);
       const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
       const status = $('#status');
 
-      // Basic deter: block right-click & drag
+      // Deter saving
       document.addEventListener('contextmenu', e=>e.preventDefault());
       document.addEventListener('dragstart', e=>e.preventDefault());
 
       (async function init(){
-        // Apply banner & background from BRAND
-        const banner = document.getElementById('bannerImg');
-        if (banner && BRAND.bannerUrl) banner.src = BRAND.bannerUrl; else if (banner) banner.closest('#topBanner').classList.add('hidden');
-        if (BRAND.backgroundUrl) { document.body.style.setProperty('--page-bg', `url('${BRAND.backgroundUrl}')`); document.body.classList.add('has-bg'); }
-
         $('#year').textContent = new Date().getFullYear();
         if (mode==='admin') initAdmin(); else await initViewer();
       })();
 
-      // ------------------------- Admin -------------------------
+      // ---------------- ADMIN ----------------
       function initAdmin(){
         $('#adminUI').classList.remove('hidden');
         $('#adminBar').classList.remove('hidden');
         $('#appTitle').textContent = 'Webkit Options — Admin';
-        const drop = $('#dropzone'); const fileInput=$('#fileInput'); const addBtn=$('#addFilesBtn');
+        const drop=$('#dropzone'); const fileInput=$('#fileInput'); const addBtn=$('#addFilesBtn');
         const importInput=$('#importJsonInput'); const exportBtn=$('#exportJsonBtn'); const clearBtn=$('#clearItemsBtn');
         addBtn.onclick=()=>fileInput.click(); drop.onclick=()=>fileInput.click();
         drop.ondragover=e=>{e.preventDefault(); drop.classList.add('border-zinc-400');};
@@ -179,38 +174,62 @@ tailwind={}; tailwind.config={ theme:{ extend:{ colors:{ brand:{ purple:'#8D6CE5
           const img=$('img',row); img.src=`data:${it.mime};base64,${it.data}`;
           const inputs=$$('input',row);
           const title=inputs[0]; const cat=inputs[1];
-          title.value = it.title || '';
-          title.oninput = e => it.title = e.target.value;
-          if (cat) { cat.value = it.category || ''; cat.oninput = e => it.category = e.target.value; }
+          title.value = it.title || ''; title.oninput = e => it.title = e.target.value;
+          cat.value = it.category || ''; cat.oninput = e => it.category = e.target.value;
           const rm=$('button',row); rm.onclick=()=>{App.items.splice(idx,1); renderAdminList();};
           list.appendChild(row);
         });
-      }
-        App.items.forEach((it,idx)=>{ const row=tpl.content.cloneNode(true); const img=$('img',row); img.src=`data:${it.mime};base64,${it.data}`; const title=$$('input',row)[0]; title.value=it.title; title.oninput=e=>it.title=e.target.value; const rm=$('button',row); rm.onclick=()=>{App.items.splice(idx,1); renderAdminList();}; list.appendChild(row); });
       }
       async function importJSON(text){
         try{
           const obj=JSON.parse(text);
           if(!Array.isArray(obj.items)) throw new Error('Invalid');
           App.items = obj.items.map(x=>({ title:x.title||'Untitled', category:x.category||'', mime:x.mime||'image/jpeg', data:x.data }));
-          renderAdminList();
-          setStatus(`Imported ${App.items.length}`);
-          setTimeout(()=>setStatus(''),800);
+          renderAdminList(); setStatus(`Imported ${App.items.length}`); setTimeout(()=>setStatus(''),800);
         } catch(e) { alert('Import failed: ' + (e.message||e)); }
-      } catch (e) {
+      }
+      function exportJSON(){
+        if(!App.items.length) return alert('Nothing to export');
+        const out={ version:1, generatedAt:new Date().toISOString(), title:App.title, items:App.items };
+        const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+        const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='gallery.json'; a.click(); URL.revokeObjectURL(a.href);
+      }
+
+      // ---------------- VIEWER ----------------
+      async function initViewer(){
+        $('#viewerUI').classList.remove('hidden');
+        $('#viewerBar').classList.remove('hidden');
+        $('#appTitle').textContent = 'Webkit Options';
+        $('#gridBtn').onclick = ()=>{ App.view='grid'; renderAll(); syncURL(); };
+        $('#flipBtn').onclick = ()=>{ App.view='flip'; renderAll(); syncURL(); };
+        window.addEventListener('keydown', (e)=>{ if (App.view==='flip'){ if (e.key==='ArrowLeft') step(-1); if (e.key==='ArrowRight') step(1); }});
+        try {
+          const res = await fetch('./gallery.json', { cache:'no-store' });
+          if (!res.ok) throw new Error('missing');
+          const json = await res.json();
+          App.items = (json.items||[]).map(x=>({ title:x.title||'Untitled', category:x.category||'', src:`data:${x.mime||'image/jpeg'};base64,${x.data}` }));
+          setBanner('');
+        } catch (e) {
           setBanner('Could not find <code>gallery.json</code> in the repo root (same place as <code>index.html</code>). Use <code>?mode=admin</code> to export one, then upload it.');
-          setStatus('No data file found');
           App.items=[];
         }
         renderAll();
       }
+
       function setBanner(html){ const b=$('#banner'); if(!html){b.classList.add('hidden'); b.innerHTML=''; return;} b.classList.remove('hidden'); b.innerHTML=html; }
+      function setStatus(msg){ if (mode==='admin') status.textContent = msg||''; else status.textContent=''; }
       function syncURL(){ const u=new URL(location); u.searchParams.set('mode','view'); u.searchParams.set('view', App.view==='flip'?'flip':'grid'); history.replaceState({},'',u); }
+
       function renderAll(){
-        renderTabs(); $('#gridBtn').classList.toggle('bg-[color:var(--brand)]/10', App.view==='grid'); $('#flipBtn').classList.toggle('bg-[color:var(--brand)]/10', App.view==='flip'); if (App.view==='grid'){ stopAutoplay(); $('#gridView').classList.remove('hidden'); $('#flipView').classList.add('hidden'); renderGrid(); } else { $('#gridView').classList.add('hidden'); $('#flipView').classList.remove('hidden'); renderFlip(); } }
+        renderTabs();
+        $('#gridBtn').style.backgroundColor = (App.view==='grid') ? 'color-mix(in srgb, var(--brand) 10%, transparent)' : '';
+        $('#flipBtn').style.backgroundColor = (App.view==='flip') ? 'color-mix(in srgb, var(--brand) 10%, transparent)' : '';
+        if (App.view==='grid'){ stopAutoplay(); $('#gridView').classList.remove('hidden'); $('#flipView').classList.add('hidden'); renderGrid(); }
+        else { $('#gridView').classList.add('hidden'); $('#flipView').classList.remove('hidden'); renderFlip(); }
+      }
+
       function renderTabs(){
-        const ct = document.getElementById('catTabs');
-        if (!ct) return;
+        const ct = document.getElementById('catTabs'); if (!ct) return;
         ct.innerHTML = '';
         const unique = Array.from(new Set(App.items.map(i => (i.category||'')).filter(Boolean)));
         const cats = ['all', ...unique];
@@ -234,51 +253,45 @@ tailwind={}; tailwind.config={ theme:{ extend:{ colors:{ brand:{ purple:'#8D6CE5
         list.forEach((it,i)=>grid.appendChild(gridCard(it,i)));
         host.appendChild(grid);
       }
-      function gridCard(it, i){ const fig=document.createElement('figure'); fig.className='rounded-2xl overflow-hidden border bg-white cursor-zoom-in'; const img=new Image(); img.src=it.src; img.alt=it.title||''; img.loading='lazy'; img.className='w-full h-48 object-cover bg-zinc-100'; img.draggable=false; const cap=document.createElement('figcaption'); cap.className='p-2 text-lg font-semibold text-zinc-900'; cap.innerHTML=`<span class="truncate" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</span>`; fig.appendChild(img); fig.appendChild(cap); fig.addEventListener('click', ()=> openLightbox(i)); return fig; }
+
+      function gridCard(it, i){
+        const fig=document.createElement('figure'); fig.className='rounded-2xl overflow-hidden border bg-white cursor-zoom-in';
+        const img=new Image(); img.src=it.src; img.alt=it.title||''; img.loading='lazy'; img.className='w-full h-48 object-cover bg-zinc-100'; img.draggable=false;
+        const cap=document.createElement('figcaption'); cap.className='p-2 text-lg font-semibold text-zinc-900';
+        cap.innerHTML=`<span class="truncate" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</span>`;
+        fig.appendChild(img); fig.appendChild(cap); fig.addEventListener('click', ()=> openLightbox(i));
+        return fig;
+      }
+
+      // Flipbook
       let idx=0, autoTimer=null, autoMs=3000;
-      function renderFlip(){ const list = App.filter==='all' ? App.items : App.items.filter(i=>i.category===App.filter); App.flat=list; if(!list.length){ $('#flipViewport').innerHTML='<div class="text-sm text-zinc-500">No items.</div>'; $('#flipMeta').textContent=''; return; } if(idx>=list.length) idx=0; showSlide(); $('#prevBtn').onclick=()=>step(-1); $('#nextBtn').onclick=()=>step(1); const playBtn=$('#playBtn'); const speedSel=$('#speedSel'); if(playBtn) playBtn.onclick=()=>{ if(autoTimer) stopAutoplay(); else startAutoplay(); }; if(speedSel) speedSel.onchange=(e)=>{ autoMs=parseInt(e.target.value,10)||3000; if(autoTimer) startAutoplay(); }; const vp=$('#flipViewport'); let sx=0,sy=0,tr=false; vp.onpointerdown=e=>{tr=true;sx=e.clientX;sy=e.clientY}; vp.onpointerup=e=>{ if(!tr)return; tr=false; const dx=e.clientX-sx,dy=e.clientY-sy; if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)) step(dx<0?1:-1); } }
+      function renderFlip(){
+        const list = App.filter==='all' ? App.items : App.items.filter(i=>i.category===App.filter);
+        App.flat=list; if(!list.length){ $('#flipViewport').innerHTML='<div class="text-sm text-zinc-500">No items.</div>'; $('#flipMeta').textContent=''; return; }
+        if(idx>=list.length) idx=0; showSlide();
+        $('#prevBtn').onclick=()=>step(-1); $('#nextBtn').onclick=()=>step(1);
+        const playBtn=$('#playBtn'); const speedSel=$('#speedSel');
+        if(playBtn) playBtn.onclick=()=>{ if(autoTimer) stopAutoplay(); else startAutoplay(); };
+        if(speedSel) speedSel.onchange=(e)=>{ autoMs=parseInt(e.target.value,10)||3000; if(autoTimer) startAutoplay(); };
+        const vp=$('#flipViewport'); let sx=0,sy=0,tr=false; vp.onpointerdown=e=>{tr=true;sx=e.clientX;sy=e.clientY}; vp.onpointerup=e=>{ if(!tr)return; tr=false; const dx=e.clientX-sx,dy=e.clientY-sy; if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)) step(dx<0?1:-1); };
+      }
       function showSlide(){ const it=App.flat[idx]; const vp=$('#flipViewport'); vp.innerHTML=''; const img=new Image(); img.src=it.src; img.alt=it.title||''; img.className='max-w-full max-h-full rounded-lg shadow'; img.draggable=false; vp.appendChild(img); const meta=`${idx+1} / ${App.flat.length} • ${it.title}`; const metaEl=$('#flipMeta'); if(metaEl) metaEl.textContent=meta; }
       function startAutoplay(){ stopAutoplay(); autoTimer=setInterval(()=>step(1), autoMs); const b=$('#playBtn'); if(b) b.textContent='Pause'; }
       function stopAutoplay(){ if(autoTimer){ clearInterval(autoTimer); autoTimer=null; } const b=$('#playBtn'); if(b) b.textContent='Play'; }
       function step(d){ idx=(idx+d+App.flat.length)%App.flat.length; showSlide(); }
 
-      // Lightbox (full image on grid click)
+      // Lightbox
       let lbOpen=false, lbIdx=0, lbList=[];
-      function openLightbox(i){
-        lbIdx = i;
-        const lb = document.getElementById('lightbox');
-        const img = document.getElementById('lbImg');
-        const cap = document.getElementById('lbCaption');
-        const it = lbList[lbIdx];
-        if (!it || !lb || !img) return;
-        img.src = it.src; img.alt = it.title || '';
-        if (cap) cap.textContent = it.title || '';
-        lb.classList.remove('hidden'); lbOpen = true;
-      }
-      function closeLightbox(){ const lb=document.getElementById('lightbox'); if(lb) lb.classList.add('hidden'); lbOpen=false; }
-      function lbStep(d){ if(!lbList.length) return; lbIdx=(lbIdx+d+lbList.length)%lbList.length; const it=lbList[lbIdx]; const img=document.getElementById('lbImg'); const cap=document.getElementById('lbCaption'); if(img&&it){ img.src=it.src; img.alt=it.title||''; } if(cap) cap.textContent=it.title||''; }
+      function openLightbox(i){ lbIdx=i; const lb=$('#lightbox'), img=$('#lbImg'), cap=$('#lbCaption'); const it=lbList[lbIdx]; if(!it||!lb||!img)return; img.src=it.src; img.alt=it.title||''; if(cap) cap.textContent=it.title||''; lb.classList.remove('hidden'); lbOpen=true; }
+      function closeLightbox(){ const lb=$('#lightbox'); if(lb) lb.classList.add('hidden'); lbOpen=false; }
+      function lbStep(d){ if(!lbList.length) return; lbIdx=(lbIdx+d+lbList.length)%lbList.length; const it=lbList[lbIdx]; const img=$('#lbImg'); const cap=$('#lbCaption'); if(img&&it){ img.src=it.src; img.alt=it.title||''; } if(cap) cap.textContent=it.title||''; }
       document.addEventListener('keydown', (e)=>{ if(!lbOpen) return; if(e.key==='Escape') closeLightbox(); if(e.key==='ArrowLeft') lbStep(-1); if(e.key==='ArrowRight') lbStep(1); });
 
-      // -------- Utils --------
-      function setStatus(msg){
-        // Show status messages only in Admin mode
-        if (mode === 'admin') { status.textContent = msg || ''; }
-        else { status.textContent = ''; }
-      }
+      // Utils
       function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
       function stripExt(n){ return n.replace(/\.[^.]+$/, '').replace(/[-_]+/g,' ').trim(); }
       function fileToDataURL(file){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(file); }); }
       function splitDataUrl(dataUrl){ const m=String(dataUrl).match(/^data:([^;]+);base64,(.*)$/); return [m?.[1]||'image/jpeg', m?.[2]||'']; }
     </script>
-    <!-- Lightbox overlay -->
-  <div id="lightbox" class="fixed inset-0 bg-black/80 backdrop-blur flex items-center justify-center p-4 z-50 hidden" onclick="closeLightbox()">
-    <button class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white border rounded-xl px-3 py-2" onclick="event.stopPropagation(); lbStep(-1)">‹</button>
-    <div class="max-w-7xl w-full" onclick="event.stopPropagation()">
-      <img id="lbImg" alt="Full image" class="mx-auto max-w-[90vw] max-h-[85vh] rounded-xl shadow" draggable="false" />
-      <div id="lbCaption" class="mt-2 text-center text-sm text-white/90"></div>
-    </div>
-    <button class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white border rounded-xl px-3 py-2" onclick="event.stopPropagation(); lbStep(1)">›</button>
-    <button class="absolute top-4 right-4 bg-white/90 hover:bg-white border rounded-xl px-3 py-2" onclick="event.stopPropagation(); closeLightbox()">Close</button>
-  </div>
-</body>
+  </body>
 </html>
