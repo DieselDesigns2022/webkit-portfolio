@@ -1,0 +1,507 @@
+<!-- File: index.html -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Portfolio Kits</title>
+    <!-- Tailwind CDN (keeps this single-file and fast to iterate) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Only why: smooth drag visuals and prevent image selection during swipe */
+      .no-select { user-select: none; -webkit-user-select: none; }
+      .scrollbar-hide { scrollbar-width: none; } .scrollbar-hide::-webkit-scrollbar { display: none; }
+    </style>
+  </head>
+  <body class="min-h-screen bg-zinc-50 text-zinc-900">
+    <!-- App Shell -->
+    <div id="app" class="grid grid-rows-[auto_1fr] grid-cols-1 min-h-screen">
+      <!-- Top Bar -->
+      <header class="flex items-center gap-2 px-4 py-3 border-b bg-white sticky top-0 z-30">
+        <div class="flex items-center gap-3 mr-auto">
+          <div class="w-8 h-8 rounded-xl bg-black text-white grid place-items-center font-bold">PK</div>
+          <h1 class="text-lg font-semibold tracking-tight">Portfolio Kits</h1>
+          <span id="status" class="text-xs text-zinc-500"></span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="newKitBtn" class="px-3 py-2 rounded-xl bg-zinc-900 text-white hover:bg-zinc-800 active:scale-[.99]">New Kit</button>
+          <label class="px-3 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 cursor-pointer">
+            <input id="importInput" type="file" accept="application/json" class="hidden" />Import
+          </label>
+          <button id="exportAllBtn" class="px-3 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200">Export All</button>
+          <div class="mx-1 w-px h-6 bg-zinc-200"></div>
+          <button id="toggleViewBtn" class="px-3 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200" title="Toggle Swipe/Grid">Toggle View</button>
+          <a id="presentLink" href="#" target="_blank" class="px-3 py-2 rounded-xl bg-zinc-900 text-white hover:bg-zinc-800">Present</a>
+        </div>
+      </header>
+
+      <!-- Body: Sidebar + Main -->
+      <div class="grid grid-cols-1 md:grid-cols-[280px_1fr] min-h-0">
+        <!-- Sidebar -->
+        <aside class="border-r bg-white min-h-0">
+          <div class="p-3 border-b flex items-center justify-between">
+            <span class="text-sm font-medium">Kits</span>
+            <button id="clearAllBtn" class="text-xs text-red-600 hover:underline" title="Delete everything">Reset</button>
+          </div>
+          <nav id="kitList" class="overflow-auto max-h-[calc(100vh-120px)] divide-y"></nav>
+        </aside>
+
+        <!-- Main content -->
+        <main id="main" class="min-h-0 overflow-auto p-4">
+          <!-- Dynamic content goes here -->
+        </main>
+      </div>
+    </div>
+
+    <!-- Modals -->
+    <dialog id="newKitDialog" class="rounded-2xl p-0 w-full max-w-xl shadow-2xl backdrop:bg-black/40">
+      <form method="dialog" class="p-6 space-y-4">
+        <h2 class="text-lg font-semibold">Create a new kit</h2>
+        <div class="space-y-2">
+          <label class="text-sm">Title</label>
+          <input id="kitTitleInput" type="text" placeholder="e.g. SaaS Dashboard Kit" class="w-full px-3 py-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-zinc-900" required />
+        </div>
+        <div class="space-y-2">
+          <label class="text-sm">Upload files (images, PDFs, videos)</label>
+          <div id="dropzone" class="border-2 border-dashed rounded-2xl p-6 text-center text-sm text-zinc-500">
+            <p>Drag & drop files here, or click to browse</p>
+            <input id="fileInput" type="file" multiple class="hidden" />
+          </div>
+          <div id="fileList" class="text-xs text-zinc-600"></div>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button value="cancel" class="px-3 py-2 rounded-xl bg-zinc-100">Cancel</button>
+          <button id="createKitBtn" class="px-3 py-2 rounded-xl bg-zinc-900 text-white">Create</button>
+        </div>
+      </form>
+    </dialog>
+
+    <template id="kitListItemTpl">
+      <div class="flex items-center gap-2 p-3 hover:bg-zinc-50">
+        <button data-action="select" class="flex-1 text-left">
+          <div class="text-sm font-medium truncate"></div>
+          <div class="text-xs text-zinc-500"></div>
+        </button>
+        <button data-action="export" class="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200">Export</button>
+        <button data-action="delete" class="text-xs px-2 py-1 rounded-lg bg-red-50 text-red-700 hover:bg-red-100">Delete</button>
+      </div>
+    </template>
+
+    <script>
+      // ------- Minimal state & utils -------
+      const qs  = (s, el=document) => el.querySelector(s);
+      const qsa = (s, el=document) => [...el.querySelectorAll(s)];
+      const statusEl = qs('#status');
+      const kitListEl = qs('#kitList');
+      const mainEl = qs('#main');
+      const toggleViewBtn = qs('#toggleViewBtn');
+      const presentLink = qs('#presentLink');
+
+      const App = { state: { kits: [], selectedKitId: null, viewMode: 'swipe', urlsCache: new Map() } };
+
+      function setStatus(msg) { statusEl.textContent = msg || ''; }
+      function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+      function fmtCount(n, label='item') { return n + ' ' + (n === 1 ? label : label + 's'); }
+      function getQuery() { return new URLSearchParams(location.search); }
+      function setQuery(params) { const u = new URL(location); for (const [k,v] of Object.entries(params)) { if (v==null) u.searchParams.delete(k); else u.searchParams.set(k, v); } history.replaceState({}, '', u); }
+
+      // ------- IndexedDB layer (tiny, no deps) -------
+      const DB_NAME = 'portfolioDB';
+      const DB_VER = 1;
+      let dbPromise = null;
+
+      function openDB() {
+        if (!('indexedDB' in window)) throw new Error('IndexedDB unsupported');
+        if (dbPromise) return dbPromise;
+        dbPromise = new Promise((resolve, reject) => {
+          const req = indexedDB.open(DB_NAME, DB_VER);
+          req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains('kits')) db.createObjectStore('kits', { keyPath: 'id' });
+            if (!db.objectStoreNames.contains('files')) db.createObjectStore('files', { keyPath: 'key' });
+          };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        return dbPromise;
+      }
+
+      async function tx(store, mode, fn) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const t = db.transaction(store, mode);
+          const s = t.objectStore(store);
+          const res = fn(s);
+          t.oncomplete = () => resolve(res);
+          t.onerror = () => reject(t.error);
+          t.onabort = () => reject(t.error);
+        });
+      }
+
+      // Kits
+      async function saveKit(kit) { await tx('kits', 'readwrite', s => s.put(kit)); }
+      async function getKit(id) {
+        return new Promise(async (resolve, reject) => {
+          const db = await openDB();
+          const t = db.transaction('kits', 'readonly');
+          const r = t.objectStore('kits').get(id);
+          r.onsuccess = () => resolve(r.result || null);
+          r.onerror = () => reject(r.error);
+        });
+      }
+      async function getAllKits() {
+        return new Promise(async (resolve, reject) => {
+          const db = await openDB();
+          const res = [];
+          const t = db.transaction('kits', 'readonly');
+          const s = t.objectStore('kits');
+          const req = s.openCursor();
+          req.onsuccess = () => {
+            const cur = req.result; if (cur) { res.push(cur.value); cur.continue(); } else resolve(res.sort((a,b)=>b.createdAt-a.createdAt)); };
+          req.onerror = () => reject(req.error);
+        });
+      }
+      async function deleteKit(id) {
+        const kit = await getKit(id); if (!kit) return;
+        await tx('kits', 'readwrite', s => s.delete(id));
+        await Promise.all(kit.itemKeys.map(key => tx('files','readwrite', s => s.delete(key))));
+      }
+
+      // Files
+      async function saveFile(key, blob) { await tx('files', 'readwrite', s => s.put({ key, blob })); }
+      async function getFileBlob(key) {
+        return new Promise(async (resolve, reject) => {
+          const db = await openDB();
+          const t = db.transaction('files', 'readonly');
+          const r = t.objectStore('files').get(key);
+          r.onsuccess = () => resolve(r.result ? r.result.blob : null);
+          r.onerror = () => reject(r.error);
+        });
+      }
+
+      // ObjectURL cache per key; revoke when replaced
+      async function getObjectURL(key) {
+        if (App.state.urlsCache.has(key)) return App.state.urlsCache.get(key);
+        const blob = await getFileBlob(key); if (!blob) return null;
+        const url = URL.createObjectURL(blob);
+        App.state.urlsCache.set(key, url);
+        return url;
+      }
+      function revokeAllObjectURLs() {
+        for (const url of App.state.urlsCache.values()) URL.revokeObjectURL(url);
+        App.state.urlsCache.clear();
+      }
+
+      // ------- Import / Export -------
+      async function exportKitJSON(kit) {
+        const items = [];
+        for (const key of kit.itemKeys) {
+          const blob = await getFileBlob(key);
+          const b64 = blob ? await blobToBase64(blob) : null;
+          items.push({ key, name: key.split(':').pop(), type: blob?.type || 'application/octet-stream', data: b64 });
+        }
+        return { version: 1, kit: { ...kit, items } };
+      }
+      async function exportAllJSON() {
+        const kits = await getAllKits();
+        const out = [];
+        for (const k of kits) out.push(await exportKitJSON(k));
+        return { version: 1, exportedAt: new Date().toISOString(), kits: out };
+      }
+      async function importFromJSON(json) {
+        if (json.kit) { await importOne(json.kit); return 1; }
+        if (json.kits) {
+          let c=0; for (const k of json.kits) { await importOne(k.kit || k); c++; } return c;
+        }
+        throw new Error('Invalid JSON');
+      }
+      async function importOne(kitBundle) {
+        const id = uid();
+        const itemKeys = [];
+        for (const it of kitBundle.items || []) {
+          const key = `${id}:${it.name || uid()}`;
+          const blob = base64ToBlob(it.data, it.type || 'application/octet-stream');
+          await saveFile(key, blob);
+          itemKeys.push(key);
+        }
+        const kit = { id, title: kitBundle.title || 'Imported Kit', createdAt: Date.now(), itemKeys };
+        await saveKit(kit);
+      }
+
+      // Helpers
+      function blobToBase64(blob) { return new Promise((res, rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result.split(',')[1]); fr.onerror=rej; fr.readAsDataURL(blob); }); }
+      function base64ToBlob(b64, type) { const b = atob(b64); const arr = new Uint8Array(b.length); for (let i=0;i<b.length;i++) arr[i]=b.charCodeAt(i); return new Blob([arr], { type }); }
+      function downloadJSON(obj, name) { const url = URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)], {type:'application/json'})); const a=document.createElement('a'); a.href=url; a.download=name; a.click(); URL.revokeObjectURL(url); }
+
+      // ------- Rendering -------
+      function render() {
+        renderSidebar();
+        renderMain();
+        updateTopActions();
+      }
+
+      function renderSidebar() {
+        kitListEl.innerHTML = '';
+        const tpl = qs('#kitListItemTpl');
+        for (const kit of App.state.kits) {
+          const node = tpl.content.cloneNode(true);
+          const btn = qs('[data-action="select"]', node);
+          const title = qs('div.text-sm', node); title.textContent = kit.title;
+          const meta = qs('div.text-xs', node); meta.textContent = fmtCount(kit.itemKeys.length, 'file');
+          btn.addEventListener('click', ()=>selectKit(kit.id));
+          const ex = qs('[data-action="export"]', node); ex.addEventListener('click', async (e)=>{ e.stopPropagation(); const pack = await exportKitJSON(kit); downloadJSON(pack, `${kit.title.replace(/\s+/g,'-').toLowerCase()}-kit.json`); });
+          const del = qs('[data-action="delete"]', node); del.addEventListener('click', async (e)=>{ e.stopPropagation(); if (!confirm(`Delete kit "${kit.title}"?`)) return; await deleteKit(kit.id); await refreshKits(); if (App.state.selectedKitId===kit.id) App.state.selectedKitId=null; render(); });
+          kitListEl.appendChild(node);
+        }
+      }
+
+      function updateTopActions() {
+        const kit = App.state.kits.find(k=>k.id===App.state.selectedKitId);
+        toggleViewBtn.disabled = !kit;
+        presentLink.classList.toggle('pointer-events-none', !kit);
+        presentLink.classList.toggle('opacity-50', !kit);
+        if (kit) {
+          const url = new URL(location.href);
+          url.searchParams.set('kit', kit.id);
+          url.searchParams.set('mode', App.state.viewMode);
+          presentLink.href = url.toString();
+        } else {
+          presentLink.href = '#';
+        }
+      }
+
+      async function renderMain() {
+        const kit = App.state.kits.find(k=>k.id===App.state.selectedKitId);
+        mainEl.innerHTML = '';
+        if (!kit) { renderAllKits(); return; }
+        if (App.state.viewMode === 'grid') await renderGrid(kit); else await renderSwipe(kit);
+      }
+
+      async function renderAllKits() {
+        const wrap = document.createElement('div');
+        wrap.className = 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3';
+        for (const kit of App.state.kits) {
+          const card = document.createElement('button');
+          card.className = 'text-left rounded-2xl overflow-hidden border bg-white hover:shadow-md transition';
+          card.addEventListener('click', ()=>selectKit(kit.id));
+          const coverKey = kit.itemKeys[0];
+          let cover = '';
+          if (coverKey) {
+            const blob = await getFileBlob(coverKey);
+            if (blob && blob.type.startsWith('image/')) {
+              const url = await getObjectURL(coverKey);
+              cover = `<img src="${url}" alt="" class="w-full h-40 object-cover" loading="lazy" />`;
+            } else {
+              cover = `<div class="w-full h-40 bg-zinc-100 grid place-items-center text-zinc-400">No preview</div>`;
+            }
+          } else {
+            cover = `<div class="w-full h-40 bg-zinc-100 grid place-items-center text-zinc-400">Empty</div>`;
+          }
+          card.innerHTML = `${cover}
+            <div class="p-4">
+              <div class="font-medium">${escapeHtml(kit.title)}</div>
+              <div class="text-xs text-zinc-500">${fmtCount(kit.itemKeys.length, 'file')}</div>
+            </div>`;
+          wrap.appendChild(card);
+        }
+        if (!App.state.kits.length) {
+          wrap.innerHTML = `<div class="text-center text-zinc-500">No kits yet. Click <b>New Kit</b> to add one.</div>`;
+        }
+        mainEl.appendChild(wrap);
+      }
+
+      async function renderGrid(kit) {
+        const head = document.createElement('div');
+        head.className = 'flex items-end justify-between mb-3';
+        head.innerHTML = `<div><h2 class="text-xl font-semibold">${escapeHtml(kit.title)}</h2><div class="text-xs text-zinc-500">${fmtCount(kit.itemKeys.length, 'file')}</div></div>`;
+        mainEl.appendChild(head);
+
+        const grid = document.createElement('div');
+        grid.className = 'grid gap-3 sm:grid-cols-2 lg:grid-cols-3';
+        mainEl.appendChild(grid);
+
+        for (const key of kit.itemKeys) {
+          const blob = await getFileBlob(key);
+          const cell = document.createElement('div');
+          cell.className = 'rounded-2xl overflow-hidden border bg-white';
+          const name = escapeHtml(key.split(':').pop());
+          if (blob && blob.type.startsWith('image/')) {
+            const url = await getObjectURL(key);
+            cell.innerHTML = `<img src="${url}" alt="${name}" class="w-full h-56 object-cover" loading="lazy" />`;
+          } else if (blob && blob.type === 'application/pdf') {
+            const url = await getObjectURL(key);
+            cell.innerHTML = `<iframe src="${url}" title="${name}" class="w-full h-56"></iframe>`;
+          } else if (blob && blob.type.startsWith('video/')) {
+            const url = await getObjectURL(key);
+            cell.innerHTML = `<video src="${url}" class="w-full h-56 object-cover" controls></video>`;
+          } else {
+            cell.innerHTML = `<div class="w-full h-56 bg-zinc-100 grid place-items-center text-zinc-400">${name}</div>`;
+          }
+          const bar = document.createElement('div');
+          bar.className = 'p-2 text-xs text-zinc-600 flex items-center justify-between';
+          bar.innerHTML = `<span class="truncate">${name}</span><a class="underline" download href="#" data-dl>Download</a>`;
+          const a = qs('[data-dl]', bar);
+          a.addEventListener('click', async (e)=>{ e.preventDefault(); const url = await getObjectURL(key); a.href = url; a.download = name; a.click(); });
+          grid.appendChild(cell); grid.appendChild(bar);
+          const wrap = document.createElement('div'); wrap.appendChild(cell); wrap.appendChild(bar); grid.appendChild(wrap); grid.removeChild(cell); grid.removeChild(bar);
+        }
+      }
+
+      async function renderSwipe(kit) {
+        const head = document.createElement('div');
+        head.className = 'flex items-center justify-between mb-3';
+        head.innerHTML = `<div><h2 class="text-xl font-semibold">${escapeHtml(kit.title)}</h2><div class="text-xs text-zinc-500">${fmtCount(kit.itemKeys.length, 'file')} • Arrow keys / swipe</div></div>`;
+        mainEl.appendChild(head);
+
+        const wrap = document.createElement('div');
+        wrap.className = 'relative bg-white border rounded-2xl overflow-hidden';
+        const viewport = document.createElement('div');
+        viewport.className = 'w-full aspect-[16/10] md:aspect-[16/9] lg:h-[70vh] grid place-items-center bg-zinc-50 no-select';
+
+        let index = 0;
+        const show = async ()=>{
+          viewport.innerHTML = '';
+          if (!kit.itemKeys.length) { viewport.innerHTML = '<div class="text-zinc-400">Empty Kit</div>'; return; }
+          const key = kit.itemKeys[index];
+          const blob = await getFileBlob(key);
+          const name = escapeHtml(key.split(':').pop());
+          if (blob && blob.type.startsWith('image/')) {
+            const url = await getObjectURL(key);
+            viewport.innerHTML = `<img src="${url}" alt="${name}" class="max-w-full max-h-full" />`;
+          } else if (blob && blob.type === 'application/pdf') {
+            const url = await getObjectURL(key);
+            viewport.innerHTML = `<iframe src="${url}#view=Fit" title="${name}" class="w-full h-full"></iframe>`;
+          } else if (blob && blob.type.startsWith('video/')) {
+            const url = await getObjectURL(key);
+            viewport.innerHTML = `<video src="${url}" class="max-w-full max-h-full" controls autoplay></video>`;
+          } else {
+            viewport.innerHTML = `<div class="text-zinc-400">${name}</div>`;
+          }
+          counter.textContent = `${index+1} / ${kit.itemKeys.length}`;
+          dlBtn.onclick = async ()=>{ const url = await getObjectURL(key); const a=document.createElement('a'); a.href=url; a.download=name; a.click(); };
+        };
+
+        const prev = document.createElement('button');
+        prev.className = 'absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white px-3 py-2 rounded-xl border shadow';
+        prev.textContent = '‹';
+        const next = document.createElement('button');
+        next.className = 'absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white px-3 py-2 rounded-xl border shadow';
+        next.textContent = '›';
+        const dlBtn = document.createElement('button');
+        dlBtn.className = 'absolute right-2 bottom-2 bg-white/80 hover:bg-white px-3 py-2 rounded-xl border shadow text-sm';
+        dlBtn.textContent = 'Download';
+        const counter = document.createElement('div');
+        counter.className = 'absolute left-2 bottom-2 bg-white/80 px-2 py-1 rounded-lg text-xs';
+
+        function step(d) { if (!kit.itemKeys.length) return; index = (index + d + kit.itemKeys.length) % kit.itemKeys.length; show(); }
+        prev.onclick = ()=>step(-1); next.onclick = ()=>step(1);
+        window.onkeydown = (e)=>{ if (e.key==='ArrowLeft') step(-1); if (e.key==='ArrowRight') step(1); };
+
+        // touch swipe
+        let startX=0, startY=0, tracking=false;
+        viewport.addEventListener('pointerdown', (e)=>{ tracking=true; startX=e.clientX; startY=e.clientY; });
+        viewport.addEventListener('pointerup', (e)=>{ if (!tracking) return; tracking=false; const dx=e.clientX-startX, dy=e.clientY-startY; if (Math.abs(dx)>40 && Math.abs(dx)>Math.abs(dy)) step(dx<0?1:-1); });
+
+        wrap.appendChild(viewport); wrap.appendChild(prev); wrap.appendChild(next); wrap.appendChild(dlBtn); wrap.appendChild(counter);
+        mainEl.appendChild(wrap);
+        await show();
+      }
+
+      // ------- Interactions -------
+      async function refreshKits() { App.state.kits = await getAllKits(); }
+      async function selectKit(id) { App.state.selectedKitId = id; setQuery({ kit: id, mode: App.state.viewMode }); revokeAllObjectURLs(); await renderMain(); updateTopActions(); }
+
+      toggleViewBtn.addEventListener('click', ()=>{
+        App.state.viewMode = App.state.viewMode === 'grid' ? 'swipe' : 'grid';
+        setQuery({ mode: App.state.viewMode }); render();
+      });
+
+      // New kit modal logic
+      const newKitDialog = qs('#newKitDialog');
+      const newKitBtn = qs('#newKitBtn');
+      const kitTitleInput = qs('#kitTitleInput');
+      const dropzone = qs('#dropzone');
+      const fileInput = qs('#fileInput');
+      const fileList = qs('#fileList');
+      const createKitBtn = qs('#createKitBtn');
+
+      newKitBtn.addEventListener('click', ()=>{ kitTitleInput.value=''; fileInput.value=''; fileList.textContent=''; newKitDialog.showModal(); });
+      dropzone.addEventListener('click', ()=>fileInput.click());
+      dropzone.addEventListener('dragover', (e)=>{ e.preventDefault(); dropzone.classList.add('border-zinc-400'); });
+      dropzone.addEventListener('dragleave', ()=>dropzone.classList.remove('border-zinc-400'));
+      dropzone.addEventListener('drop', (e)=>{ e.preventDefault(); dropzone.classList.remove('border-zinc-400'); handleFiles(e.dataTransfer.files); });
+      fileInput.addEventListener('change', ()=>handleFiles(fileInput.files));
+
+      function handleFiles(files) {
+        const arr = [...files];
+        if (!arr.length) return; fileList.textContent = arr.map(f=>`${f.name} (${Math.round(f.size/1024)} KB)`).join(' • ');
+        dropzone.querySelector('p').textContent = `${arr.length} file(s) selected`;
+        dropzone.classList.add('bg-zinc-50');
+      }
+
+      createKitBtn.addEventListener('click', async (e)=>{
+        e.preventDefault();
+        try {
+          const title = kitTitleInput.value.trim();
+          const files = fileInput.files;
+          if (!title) throw new Error('Title required');
+          if (!files || !files.length) throw new Error('Please add at least one file');
+          setStatus('Saving…');
+          const id = uid();
+          const keys = [];
+          for (const f of files) {
+            const key = `${id}:${f.name}`; await saveFile(key, f); keys.push(key);
+          }
+          const kit = { id, title, createdAt: Date.now(), itemKeys: keys };
+          await saveKit(kit);
+          await refreshKits();
+          newKitDialog.close();
+          await selectKit(id);
+          setStatus('Saved'); setTimeout(()=>setStatus(''), 1000);
+        } catch (err) {
+          alert(err.message || String(err));
+        }
+      });
+
+      // Import / Export all / Reset
+      qs('#importInput').addEventListener('change', async (e)=>{
+        const file = e.target.files?.[0]; if (!file) return;
+        try {
+          setStatus('Importing…');
+          const json = JSON.parse(await file.text());
+          const count = await importFromJSON(json);
+          await refreshKits(); render(); setStatus(`Imported ${count} kit(s)`); setTimeout(()=>setStatus(''), 1200);
+        } catch (err) { alert('Import failed: ' + (err.message || String(err))); }
+        finally { e.target.value=''; }
+      });
+      qs('#exportAllBtn').addEventListener('click', async ()=>{ setStatus('Packaging…'); const obj = await exportAllJSON(); downloadJSON(obj, 'portfolio-kits.json'); setStatus(''); });
+      qs('#clearAllBtn').addEventListener('click', async ()=>{
+        if (!confirm('Delete all kits and files?')) return;
+        const kits = await getAllKits(); for (const k of kits) await deleteKit(k.id);
+        await refreshKits(); App.state.selectedKitId=null; revokeAllObjectURLs(); render();
+      });
+
+      // ------- Boot -------
+      (async function init(){
+        try {
+          await openDB();
+          await refreshKits();
+          const qp = getQuery();
+          const kitId = qp.get('kit');
+          const mode = qp.get('mode');
+          if (mode === 'grid' || mode === 'swipe') App.state.viewMode = mode;
+          if (kitId && App.state.kits.some(k=>k.id===kitId)) App.state.selectedKitId = kitId;
+          render();
+        } catch (err) {
+          mainEl.innerHTML = `<div class="max-w-xl mx-auto mt-10 bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl">
+            <div class="font-medium mb-1">This browser can't run the local app.</div>
+            <div class="text-sm">${escapeHtml(err.message || String(err))}</div>
+          </div>`;
+        }
+      })();
+
+      // ------- Misc -------
+      function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+    </script>
+  </body>
+</html>
