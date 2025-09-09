@@ -4,8 +4,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Webkit options for Diesel Designs</title>
-    <script>tailwind={}; tailwind.config={ theme:{ extend:{ colors:{ brand:{ purple:'#8D6CE5' }}}}};</script>
+    <title>Webkit Options for Diesel Designs</title>
+    <script>
+      /* Simple branding config — paste your image URLs here */
+      const BRAND = {
+        // Full-width banner across the top:
+        bannerUrl: 'https://cdn.shopify.com/s/files/1/0659/3023/2034/files/LogowithWebsite_3b736bf3-8f06-4553-bed2-68878cd7395a.png?v=1757448093',
+        // Optional background image for the whole page (leave '' to disable):
+        backgroundUrl: ''
+      };
+tailwind={}; tailwind.config={ theme:{ extend:{ colors:{ brand:{ purple:'#8D6CE5' }}}}};</script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       .no-select{user-select:none;-webkit-user-select:none}
@@ -13,27 +21,34 @@
       /* Deter saving */
       body{-webkit-touch-callout:none}
       img{-webkit-user-drag:none}
+      body.has-bg{ background-image: var(--page-bg); background-size: cover; background-position: center; background-attachment: fixed; }
     </style>
   </head>
   <body class="min-h-screen bg-zinc-50 text-zinc-900">
-    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b-2" style="border-color:var(--brand)">
-      <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
-        <img src="https://cdn.shopify.com/s/files/1/0659/3023/2034/files/LogowithWebsite_3b736bf3-8f06-4553-bed2-68878cd7395a.png?v=1757448093" alt="Diesel Designs" class="h-8 w-auto" />
-        <h1 id="appTitle" class="text-lg font-semibold tracking-tight">Webkit Options</h1>
-        <span id="status" class="text-xs text-zinc-500"></span>
-        <div id="adminBar" class="ml-auto hidden items-center gap-2">
-          <label class="px-3 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 cursor-pointer">
-            <input id="importJsonInput" type="file" accept="application/json" class="hidden" />Import JSON
-          </label>
-          <button id="exportJsonBtn" class="px-3 py-2 rounded-xl bg-zinc-900 text-white hover:bg-zinc-800">Export gallery.json</button>
-          <div class="mx-1 w-px h-6 bg-zinc-200"></div>
-          <button id="addFilesBtn" class="px-3 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200">Add Files</button>
-          <input id="fileInput" type="file" accept="image/*" multiple class="hidden" />
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b" style="border-color:var(--brand)">
+      <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col gap-3">
+        <!-- Centered logo + title -->
+        <div class="flex items-center justify-center gap-3">
+          <img src="https://cdn.shopify.com/s/files/1/0659/3023/2034/files/LogowithWebsite_3b736bf3-8f06-4553-bed2-68878cd7395a.png?v=1757448093" alt="Diesel Designs" class="h-16 w-auto" />
+          <h1 id="appTitle" class="text-2xl font-semibold tracking-tight">Webkit Options</h1>
         </div>
-        <div id="viewerBar" class="ml-auto hidden items-center gap-2">
-          <div class="inline-flex rounded-xl border border-[color:var(--brand)] overflow-hidden">
-            <button id="gridBtn" class="px-3 py-2 text-sm bg-[color:var(--brand)]/10">Grid</button>
-            <button id="flipBtn" class="px-3 py-2 text-sm">Flipbook</button>
+        <!-- Controls row -->
+        <div class="flex items-center justify-between">
+          <span id="status" class="text-xs text-zinc-500"></span>
+          <div id="adminBar" class="hidden items-center gap-2">
+            <label class="px-3 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 cursor-pointer">
+              <input id="importJsonInput" type="file" accept="application/json" class="hidden" />Import JSON
+            </label>
+            <button id="exportJsonBtn" class="px-3 py-2 rounded-xl bg-zinc-900 text-white hover:bg-zinc-800">Export gallery.json</button>
+            <div class="mx-1 w-px h-6 bg-zinc-200"></div>
+            <button id="addFilesBtn" class="px-3 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200">Add Files</button>
+            <input id="fileInput" type="file" accept="image/*" multiple class="hidden" />
+          </div>
+          <div id="viewerBar" class="hidden items-center gap-2">
+            <div class="inline-flex rounded-xl border border-[color:var(--brand)] overflow-hidden">
+              <button id="gridBtn" class="px-3 py-2 text-sm bg-[color:var(--brand)]/10">Grid</button>
+              <button id="flipBtn" class="px-3 py-2 text-sm">Flipbook</button>
+            </div>
           </div>
         </div>
       </div>
@@ -119,6 +134,11 @@
       document.addEventListener('dragstart', e=>e.preventDefault());
 
       (async function init(){
+        // Apply banner & background from BRAND
+        const banner = document.getElementById('bannerImg');
+        if (banner && BRAND.bannerUrl) banner.src = BRAND.bannerUrl; else if (banner) banner.closest('#topBanner').classList.add('hidden');
+        if (BRAND.backgroundUrl) { document.body.style.setProperty('--page-bg', `url('${BRAND.backgroundUrl}')`); document.body.classList.add('has-bg'); }
+
         $('#year').textContent = new Date().getFullYear();
         if (mode==='admin') initAdmin(); else await initViewer();
       })();
@@ -127,7 +147,7 @@
       function initAdmin(){
         $('#adminUI').classList.remove('hidden');
         $('#adminBar').classList.remove('hidden');
-        $('#appTitle').textContent = 'Portfolio — Admin';
+        $('#appTitle').textContent = 'Webkit Options — Admin';
         const drop = $('#dropzone'); const fileInput=$('#fileInput'); const addBtn=$('#addFilesBtn');
         const importInput=$('#importJsonInput'); const exportBtn=$('#exportJsonBtn'); const clearBtn=$('#clearItemsBtn');
         addBtn.onclick=()=>fileInput.click(); drop.onclick=()=>fileInput.click();
@@ -156,7 +176,7 @@
       async function initViewer(){
         $('#viewerUI').classList.remove('hidden');
         $('#viewerBar').classList.remove('hidden');
-        $('#appTitle').textContent = 'Portfolio';
+        $('#appTitle').textContent = 'Webkit Options';
         $('#gridBtn').onclick = ()=>{ App.view='grid'; renderAll(); syncURL(); };
         $('#flipBtn').onclick = ()=>{ App.view='flip'; renderAll(); syncURL(); };
         window.addEventListener('keydown', (e)=>{ if (App.view==='flip'){ if (e.key==='ArrowLeft') step(-1); if (e.key==='ArrowRight') step(1); }});
@@ -166,7 +186,7 @@
           const json = await res.json();
           App.title = json.title || 'Portfolio';
           App.items = (json.items||[]).map(x=>({ title:x.title||'Untitled', src:`data:${x.mime||'image/jpeg'};base64,${x.data}` }));
-          $('#appTitle').textContent = App.title;
+          $('#appTitle').textContent = 'Webkit Options';
           setBanner('');
           setStatus(`Loaded ${App.items.length} images`);
         } catch (e) {
@@ -180,7 +200,7 @@
       function syncURL(){ const u=new URL(location); u.searchParams.set('mode','view'); u.searchParams.set('view', App.view==='flip'?'flip':'grid'); history.replaceState({},'',u); }
       function renderAll(){ $('#gridBtn').classList.toggle('bg-[color:var(--brand)]/10', App.view==='grid'); $('#flipBtn').classList.toggle('bg-[color:var(--brand)]/10', App.view==='flip'); if (App.view==='grid'){ stopAutoplay(); $('#gridView').classList.remove('hidden'); $('#flipView').classList.add('hidden'); renderGrid(); } else { $('#gridView').classList.add('hidden'); $('#flipView').classList.remove('hidden'); renderFlip(); } }
       function renderGrid(){ const host=$('#gridView'); host.innerHTML=''; if(!App.items.length){ host.innerHTML='<div class="text-sm text-zinc-500">No items to show.</div>'; return; } const grid=document.createElement('div'); grid.className='grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'; App.items.forEach(it=>grid.appendChild(gridCard(it))); host.appendChild(grid); }
-      function gridCard(it){ const fig=document.createElement('figure'); fig.className='rounded-2xl overflow-hidden border bg-white'; const img=new Image(); img.src=it.src; img.alt=it.title||''; img.loading='lazy'; img.className='w-full h-48 object-cover bg-zinc-100'; img.draggable=false; const cap=document.createElement('figcaption'); cap.className='p-2 text-base font-medium text-zinc-900'; cap.innerHTML=`<span class="truncate" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</span>`; fig.appendChild(img); fig.appendChild(cap); return fig; }
+      function gridCard(it){ const fig=document.createElement('figure'); fig.className='rounded-2xl overflow-hidden border bg-white'; const img=new Image(); img.src=it.src; img.alt=it.title||''; img.loading='lazy'; img.className='w-full h-48 object-cover bg-zinc-100'; img.draggable=false; const cap=document.createElement('figcaption'); cap.className='p-2 text-lg font-semibold text-zinc-900'; cap.innerHTML=`<span class="truncate" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</span>`; fig.appendChild(img); fig.appendChild(cap); return fig; }
       let idx=0, autoTimer=null, autoMs=3000;
       function renderFlip(){ const list=App.items; App.flat=list; if(!list.length){ $('#flipViewport').innerHTML='<div class="text-sm text-zinc-500">No items.</div>'; $('#flipMeta').textContent=''; return; } if(idx>=list.length) idx=0; showSlide(); $('#prevBtn').onclick=()=>step(-1); $('#nextBtn').onclick=()=>step(1); const playBtn=$('#playBtn'); const speedSel=$('#speedSel'); if(playBtn) playBtn.onclick=()=>{ if(autoTimer) stopAutoplay(); else startAutoplay(); }; if(speedSel) speedSel.onchange=(e)=>{ autoMs=parseInt(e.target.value,10)||3000; if(autoTimer) startAutoplay(); }; const vp=$('#flipViewport'); let sx=0,sy=0,tr=false; vp.onpointerdown=e=>{tr=true;sx=e.clientX;sy=e.clientY}; vp.onpointerup=e=>{ if(!tr)return; tr=false; const dx=e.clientX-sx,dy=e.clientY-sy; if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)) step(dx<0?1:-1); } }
       function showSlide(){ const it=App.flat[idx]; const vp=$('#flipViewport'); vp.innerHTML=''; const img=new Image(); img.src=it.src; img.alt=it.title||''; img.className='max-w-full max-h-full rounded-lg shadow'; img.draggable=false; vp.appendChild(img); const meta=`${idx+1} / ${App.flat.length} • ${it.title}`; const metaEl=$('#flipMeta'); if(metaEl) metaEl.textContent=meta; }
