@@ -11,13 +11,21 @@ Workflow:
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Portfolio — Admin & Viewer</title>
+    <!-- Tailwind (CDN) -->
+    <script>tailwind={}; tailwind.config={ theme:{ extend:{ colors:{ brand:{ purple:'#8D6CE5', mint:'#87DFE1', pink:'#FE8ED3', ink:'#000000' }}}}};</script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>.no-select{user-select:none;-webkit-user-select:none}</style>
+    <style>
+      .no-select{user-select:none;-webkit-user-select:none}
+      /* Branding helpers */
+      :root{ --brand:#8D6CE5; --brand-mint:#87DFE1; --brand-pink:#FE8ED3; --brand-ink:#000000; }
+      body{ -webkit-touch-callout:none; }
+      img{ -webkit-user-drag:none; }
+    </style>
   </head>
   <body class="min-h-screen bg-zinc-50 text-zinc-900">
-    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b">
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b-2 border-[color:var(--brand)]">
       <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
-        <div class="w-8 h-8 rounded-xl bg-black text-white grid place-items-center font-bold">PF</div>
+        <div class="w-8 h-8 rounded-xl grid place-items-center font-bold text-white" style="background:var(--brand);">DD</div>
         <h1 id="appTitle" class="text-lg font-semibold tracking-tight">Portfolio</h1>
         <span id="status" class="text-xs text-zinc-500"></span>
         <div id="adminBar" class="ml-auto hidden items-center gap-2">
@@ -30,8 +38,8 @@ Workflow:
           <input id="fileInput" type="file" accept="image/*" multiple class="hidden" />
         </div>
         <div id="viewerBar" class="ml-auto hidden items-center gap-2">
-          <div class="inline-flex rounded-xl border overflow-hidden">
-            <button id="gridBtn" class="px-3 py-2 text-sm bg-zinc-100">Grid</button>
+          <div class="inline-flex rounded-xl border border-[color:var(--brand)] overflow-hidden">
+            <button id="gridBtn" class="px-3 py-2 text-sm bg-[color:var(--brand)]/10">Grid</button>
             <button id="flipBtn" class="px-3 py-2 text-sm">Flipbook</button>
           </div>
         </div>
@@ -71,10 +79,17 @@ Workflow:
         <section id="gridView" class="grid gap-6"></section>
         <section id="flipView" class="hidden">
           <div class="relative rounded-2xl border bg-white overflow-hidden">
-            <div id="flipViewport" class="w-full aspect-[16/10] md:aspect-[16/9] grid place-items-center bg-zinc-50 no-select"></div>
+            <div id="flipViewport" class="w-full h-[60vh] md:h-[65vh] lg:h-[70vh] grid place-items-center bg-zinc-50 no-select"></div>
             <button id="prevBtn" class="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white px-3 py-2 rounded-xl border shadow">‹</button>
             <button id="nextBtn" class="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white px-3 py-2 rounded-xl border shadow">›</button>
             <div class="absolute left-2 bottom-2 bg-white/90 px-2 py-1 rounded-lg text-xs" id="flipMeta"></div>
+            <select id="speedSel" class="absolute right-28 bottom-2 bg-white/90 border rounded-lg px-2 py-1 text-xs">
+              <option value="2000">2s</option>
+              <option value="3000" selected>3s</option>
+              <option value="5000">5s</option>
+              <option value="8000">8s</option>
+            </select>
+            <button id="playBtn" class="absolute right-2 bottom-2 bg-[color:var(--brand)] text-white hover:opacity-90 px-3 py-2 rounded-xl border border-[color:var(--brand)] shadow text-sm">Play</button>
           </div>
         </section>
       </section>
@@ -119,6 +134,8 @@ Workflow:
       const status = $('#status');
 
       // ---------- Boot ----------
+      // Prevent dragging images out (basic deter)
+      document.addEventListener('dragstart', (e)=> e.preventDefault());
       (async function init(){
         $('#year').textContent = new Date().getFullYear();
         if (mode === 'admin') initAdmin(); else await initViewer();
@@ -208,17 +225,50 @@ Workflow:
         $('#flipBtn').onclick = ()=>{ App.view='flip'; renderAll(); syncURL(); };
         window.addEventListener('keydown', (e)=>{ if (App.view==='flip'){ if (e.key==='ArrowLeft') step(-1); if (e.key==='ArrowRight') step(1); }});
 
-        // Load gallery.json
+        // Disable right-click (basic deter)
+        document.addEventListener('contextmenu', (e)=> e.preventDefault());
+
+        // Try gallery.json first (embedded base64 images)
+        let loaded = false;
         try {
           const res = await fetch('./gallery.json', { cache: 'no-store' });
-          if (!res.ok) throw new Error('Not found');
-          const json = await res.json();
-          App.title = json.title || 'Portfolio';
-          App.items = (json.items||[]).map(x=>({ title:x.title||'Untitled', category:x.category||'', src: `data:${x.mime||'image/jpeg'};base64,${x.data}` }));
-          $('#appTitle').textContent = App.title;
-          setBanner('');
-        } catch (_) {
-          setBanner('No <code>gallery.json</code> found. Ask the admin to export one in <code>?mode=admin</code> and upload it to the repo root.');
+          if (res.ok) {
+            const json = await res.json();
+            App.title = json.title || 'Portfolio';
+            App.items = (json.items||[]).map(x=>({ title:x.title||'Untitled', category:x.category||'', src: `data:${x.mime||'image/jpeg'};base64,${x.data}` }));
+            $('#appTitle').textContent = App.title;
+            setBanner('');
+            loaded = true;
+          }
+        } catch (_) {}
+
+        // If not found or too big to upload, fall back to manifest.json (files in repo)
+        if (!loaded) {
+          try {
+            const res2 = await fetch('./manifest.json', { cache: 'no-store' });
+            if (!res2.ok) throw new Error('manifest missing');
+            const m = await res2.json();
+            App.title = m.title || 'Portfolio';
+            const items = [];
+            if (Array.isArray(m.categories)) {
+              for (const cat of m.categories) {
+                const cname = cat.name || cat.id || 'Uncategorized';
+                for (const it of (cat.items||[])) {
+                  items.push({ title: it.title || basename(it.src), category: cname, src: it.src });
+                }
+              }
+            } else if (Array.isArray(m.items)) {
+              for (const it of m.items) items.push({ title: it.title || basename(it.src), category: it.category || '', src: it.src });
+            }
+            App.items = items;
+            $('#appTitle').textContent = App.title;
+            setBanner('');
+            loaded = true;
+          } catch (_) {}
+        }
+
+        if (!loaded) {
+          setBanner('No <code>gallery.json</code> or <code>manifest.json</code> found. Option A: use <code>?mode=admin</code> to export <code>gallery.json</code>. Option B (recommended for many images): upload images to an <code>assets/</code> folder and add a small <code>manifest.json</code>.');
           App.items = [];
         }
 
@@ -241,10 +291,18 @@ Workflow:
 
       function renderAll(){
         renderTabs();
-        $('#gridBtn').classList.toggle('bg-zinc-100', App.view==='grid');
-        $('#flipBtn').classList.toggle('bg-zinc-100', App.view==='flip');
-        if (App.view==='grid') { $('#gridView').classList.remove('hidden'); $('#flipView').classList.add('hidden'); renderGrid(); }
-        else { $('#gridView').classList.add('hidden'); $('#flipView').classList.remove('hidden'); renderFlip(); }
+        $('#gridBtn').classList.toggle('bg-[color:var(--brand)]/10', App.view==='grid');
+        $('#flipBtn').classList.toggle('bg-[color:var(--brand)]/10', App.view==='flip');
+        if (App.view==='grid') {
+          stopAutoplay();
+          $('#gridView').classList.remove('hidden');
+          $('#flipView').classList.add('hidden');
+          renderGrid();
+        } else {
+          $('#gridView').classList.add('hidden');
+          $('#flipView').classList.remove('hidden');
+          renderFlip();
+        }
       }
 
       function renderTabs(){
@@ -290,21 +348,28 @@ Workflow:
       }
 
       // ---- Flipbook ----
-      let idx=0;
+      let idx=0; let autoTimer=null; let autoMs=3000;
       function renderFlip(){
         const list = filtered();
         App.flat = list;
         if (!list.length){ $('#flipViewport').innerHTML='<div class="text-sm text-zinc-500">No items.</div>'; $('#flipMeta').textContent=''; return; }
         if (idx>=list.length) idx=0;
         showSlide();
+        // Autoplay controls
+        const playBtn = $('#playBtn');
+        const speedSel = $('#speedSel');
+        if (playBtn) playBtn.onclick = ()=>{ if (autoTimer) stopAutoplay(); else startAutoplay(); };
+        if (speedSel) speedSel.onchange = (e)=>{ autoMs = parseInt(e.target.value,10)||3000; if (autoTimer) startAutoplay(); };
         $('#prevBtn').onclick = ()=>step(-1);
         $('#nextBtn').onclick = ()=>step(1);
         const vp=$('#flipViewport'); let sx=0,sy=0,tr=false; vp.onpointerdown=e=>{tr=true;sx=e.clientX;sy=e.clientY}; vp.onpointerup=e=>{ if(!tr)return; tr=false; const dx=e.clientX-sx,dy=e.clientY-sy; if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)) step(dx<0?1:-1); };
       }
+      function startAutoplay(){ stopAutoplay(); autoTimer = setInterval(()=>step(1), autoMs); const b=$('#playBtn'); if (b) b.textContent='Pause'; }
+      function stopAutoplay(){ if (autoTimer){ clearInterval(autoTimer); autoTimer=null; } const b=$('#playBtn'); if (b) b.textContent='Play'; }
       function step(d){ idx=(idx+d+App.flat.length)%App.flat.length; showSlide(); }
       function showSlide(){
         const it=App.flat[idx]; const vp=$('#flipViewport');
-        vp.innerHTML=''; const img=new Image(); img.src=it.src; img.alt=it.title||''; img.className='max-w-full max-h-full rounded-lg shadow'; vp.appendChild(img);
+        vp.innerHTML=''; const img=new Image(); img.src=it.src; img.draggable=false; img.alt=it.title||''; img.className='max-w-full max-h-full rounded-lg shadow'; vp.appendChild(img);
         $('#flipMeta').textContent=`${idx+1} / ${App.flat.length} • ${it.title}${it.category? ' • '+it.category:''}`;
       }
 
