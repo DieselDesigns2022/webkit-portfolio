@@ -1,29 +1,22 @@
-<!-- File: index.html (Admin + Viewer)
-Why: Single static file with two interfaces. Admin prepares a gallery JSON; Viewer renders it.
-Workflow:
-  1) Admin mode: open with ?mode=admin → upload images, add titles/categories → Export JSON (downloads gallery.json)
-  2) Upload that gallery.json to your repo root (same folder as index.html)
-  3) Viewer mode: open without params (or ?mode=view) → site fetches gallery.json and shows Grid/Flipbook to customers
--->
+<!-- File: index.html (Known‑Good: Viewer default, Admin via ?mode=admin) -->
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Portfolio — Admin & Viewer</title>
-    <!-- Tailwind (CDN) -->
-    <script>tailwind={}; tailwind.config={ theme:{ extend:{ colors:{ brand:{ purple:'#8D6CE5', mint:'#87DFE1', pink:'#FE8ED3', ink:'#000000' }}}}};</script>
+    <title>Portfolio — Viewer & Admin</title>
+    <script>tailwind={}; tailwind.config={ theme:{ extend:{ colors:{ brand:{ purple:'#8D6CE5' }}}}};</script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       .no-select{user-select:none;-webkit-user-select:none}
-      /* Branding helpers */
-      :root{ --brand:#8D6CE5; --brand-mint:#87DFE1; --brand-pink:#FE8ED3; --brand-ink:#000000; }
-      body{ -webkit-touch-callout:none; }
-      img{ -webkit-user-drag:none; }
+      :root{ --brand:#8D6CE5; }
+      /* Deter saving */
+      body{-webkit-touch-callout:none}
+      img{-webkit-user-drag:none}
     </style>
   </head>
   <body class="min-h-screen bg-zinc-50 text-zinc-900">
-    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b-2 border-[color:var(--brand)]">
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b-2" style="border-color:var(--brand)">
       <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
         <img src="https://cdn.shopify.com/s/files/1/0659/3023/2034/files/LogowithWebsite_3b736bf3-8f06-4553-bed2-68878cd7395a.png?v=1757448093" alt="Diesel Designs" class="h-8 w-auto" />
         <h1 id="appTitle" class="text-lg font-semibold tracking-tight">Portfolio</h1>
@@ -47,14 +40,14 @@ Workflow:
     </header>
 
     <main class="max-w-6xl mx-auto px-4 py-4">
-      <!-- Admin UI -->
+      <!-- Admin UI (only visible when ?mode=admin) -->
       <section id="adminUI" class="hidden space-y-4">
         <div class="rounded-2xl border bg-white p-4">
           <h2 class="font-semibold mb-2">Add images</h2>
           <div id="dropzone" class="border-2 border-dashed rounded-2xl p-6 text-center text-sm text-zinc-500 bg-zinc-50">
             Drag & drop files here, or <span class="underline">click to browse</span>
           </div>
-          <p class="text-xs text-zinc-500 mt-2">Images only (JPG/PNG). Titles and categories are editable below.</p>
+          <p class="text-xs text-zinc-500 mt-2">Images only (JPG/PNG). Titles are editable below.</p>
         </div>
 
         <div id="itemsWrap" class="rounded-2xl border bg-white">
@@ -72,14 +65,13 @@ Workflow:
         </div>
       </section>
 
-      <!-- Viewer UI -->
+      <!-- Viewer UI (default) -->
       <section id="viewerUI" class="hidden space-y-4">
         <div id="banner" class="hidden p-3 rounded-xl border bg-amber-50 text-amber-900 text-sm"></div>
-        <div id="catTabs" class="flex flex-wrap gap-2"></div>
         <section id="gridView" class="grid gap-6"></section>
         <section id="flipView" class="hidden">
           <div class="relative rounded-2xl border bg-white overflow-hidden">
-            <div id="flipViewport" class="w-full h-[60vh] md:h-[65vh] lg:h-[70vh] grid place-items-center bg-zinc-50 no-select"></div>
+            <div id="flipViewport" class="w-full h-[62vh] md:h-[66vh] lg:h-[70vh] grid place-items-center bg-zinc-50 no-select"></div>
             <button id="prevBtn" class="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white px-3 py-2 rounded-xl border shadow">‹</button>
             <button id="nextBtn" class="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white px-3 py-2 rounded-xl border shadow">›</button>
             <div class="absolute left-2 bottom-2 bg-white/90 px-2 py-1 rounded-lg text-sm font-medium" id="flipMeta"></div>
@@ -96,7 +88,7 @@ Workflow:
     </main>
 
     <footer class="max-w-6xl mx-auto px-4 py-8 text-center text-xs text-zinc-500">
-      © <span id="year"></span> Your Name
+      © <span id="year"></span> Diesel Designs
     </footer>
 
     <template id="itemRowTpl">
@@ -106,286 +98,102 @@ Workflow:
           <label class="text-xs text-zinc-500">Title
             <input class="w-full mt-1 px-3 py-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-zinc-900" />
           </label>
-          <label class="text-xs text-zinc-500">Category (optional)
-            <input class="w-full mt-1 px-3 py-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-zinc-900" />
-          </label>
         </div>
         <button class="shrink-0 text-xs px-2 py-1 rounded-lg bg-red-50 text-red-700 hover:bg-red-100">Remove</button>
       </div>
     </template>
 
     <script>
-      // ---------- Mode detection ----------
+      // ---------- Mode: default viewer; admin only if ?mode=admin ----------
       const params = new URLSearchParams(location.search);
-      const mode = (params.get('mode')||'view').toLowerCase(); // 'admin' or 'view'
+      const mode = (params.get('mode')||'view').toLowerCase();
 
       // ---------- State ----------
-      const App = {
-        items: [],         // Admin: {title, category, mime, data}, Viewer: normalized with src
-        view: 'grid',      // 'grid' | 'flip'
-        filter: 'all',
-        flat: [],
-        title: 'Portfolio',
-      };
-
-      // ---------- Elements ----------
-      const $ = (s, r=document)=>r.querySelector(s);
-      const $$ = (s, r=document)=>[...r.querySelectorAll(s)];
+      const App = { items: [], view: 'grid', flat: [], title: 'Portfolio' };
+      const $ = (s,r=document)=>r.querySelector(s);
+      const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
       const status = $('#status');
 
-      // ---------- Boot ----------
-      // Prevent dragging images out (basic deter)
-      document.addEventListener('dragstart', (e)=> e.preventDefault());
+      // Basic deter: block right-click & drag
+      document.addEventListener('contextmenu', e=>e.preventDefault());
+      document.addEventListener('dragstart', e=>e.preventDefault());
+
       (async function init(){
         $('#year').textContent = new Date().getFullYear();
-        if (mode === 'admin') initAdmin(); else await initViewer();
+        if (mode==='admin') initAdmin(); else await initViewer();
       })();
 
-      // ---------- Admin ----------
+      // ------------------------- Admin -------------------------
       function initAdmin(){
         $('#adminUI').classList.remove('hidden');
         $('#adminBar').classList.remove('hidden');
         $('#appTitle').textContent = 'Portfolio — Admin';
-
-        const drop = $('#dropzone');
-        const fileInput = $('#fileInput');
-        const addBtn = $('#addFilesBtn');
-        const importInput = $('#importJsonInput');
-        const exportBtn = $('#exportJsonBtn');
-        const clearBtn = $('#clearItemsBtn');
-
-        addBtn.onclick = ()=>fileInput.click();
-        drop.onclick = ()=>fileInput.click();
-        drop.ondragover = (e)=>{ e.preventDefault(); drop.classList.add('border-zinc-400'); };
-        drop.ondragleave = ()=>drop.classList.remove('border-zinc-400');
-        drop.ondrop = (e)=>{ e.preventDefault(); drop.classList.remove('border-zinc-400'); handleFiles(e.dataTransfer.files); };
-        fileInput.onchange = ()=>handleFiles(fileInput.files);
-        importInput.onchange = async (e)=>{ const f=e.target.files?.[0]; if (!f) return; await importJSON(await f.text()); e.target.value=''; };
-        exportBtn.onclick = exportJSON;
-        clearBtn.onclick = ()=>{ if (confirm('Remove all items?')) { App.items=[]; renderAdminList(); }};
-
+        const drop = $('#dropzone'); const fileInput=$('#fileInput'); const addBtn=$('#addFilesBtn');
+        const importInput=$('#importJsonInput'); const exportBtn=$('#exportJsonBtn'); const clearBtn=$('#clearItemsBtn');
+        addBtn.onclick=()=>fileInput.click(); drop.onclick=()=>fileInput.click();
+        drop.ondragover=e=>{e.preventDefault(); drop.classList.add('border-zinc-400');};
+        drop.ondragleave=()=>drop.classList.remove('border-zinc-400');
+        drop.ondrop=e=>{e.preventDefault(); drop.classList.remove('border-zinc-400'); handleFiles(e.dataTransfer.files);};
+        fileInput.onchange=()=>handleFiles(fileInput.files);
+        importInput.onchange=async (e)=>{ const f=e.target.files?.[0]; if(!f) return; await importJSON(await f.text()); e.target.value=''; };
+        exportBtn.onclick=exportJSON; clearBtn.onclick=()=>{ if(confirm('Remove all items?')){App.items=[]; renderAdminList();} };
         renderAdminList();
       }
-
       async function handleFiles(files){
-        const arr = [...files]; if (!arr.length) return;
-        setStatus('Reading…');
-        for (const f of arr) {
-          if (!f.type.startsWith('image/')) continue;
-          const dataUrl = await fileToDataURL(f);
-          const [mime, data] = splitDataUrl(dataUrl);
-          App.items.push({ title: stripExt(f.name), category: '', mime, data });
-        }
-        renderAdminList(); setStatus('Ready'); setTimeout(()=>setStatus(''), 800);
+        const arr=[...files]; if(!arr.length) return; setStatus('Reading…');
+        for(const f of arr){ if(!f.type.startsWith('image/')) continue; const dataUrl=await fileToDataURL(f); const [mime,data]=splitDataUrl(dataUrl); App.items.push({ title:stripExt(f.name), mime, data }); }
+        renderAdminList(); setStatus(`Ready (${App.items.length})`); setTimeout(()=>setStatus(''),800);
       }
-
       function renderAdminList(){
-        const list = $('#itemsList'); list.innerHTML='';
-        const tpl = $('#itemRowTpl');
-        if (!App.items.length) { list.innerHTML = '<div class="p-4 text-sm text-zinc-500">No items yet. Add files above.</div>'; return; }
-        App.items.forEach((it, idx)=>{
-          const row = tpl.content.cloneNode(true);
-          const img = $('img', row); img.src = toSrc(it);
-          const title = $$('input', row)[0]; title.value = it.title; title.oninput = e=>it.title=e.target.value;
-          const cat = $$('input', row)[1]; cat.value = it.category||''; cat.oninput = e=>it.category=e.target.value;
-          const rm = $('button', row); rm.onclick = ()=>{ App.items.splice(idx,1); renderAdminList(); };
-          list.appendChild(row);
-        });
+        const list=$('#itemsList'); list.innerHTML=''; const tpl=$('#itemRowTpl');
+        if(!App.items.length){ list.innerHTML='<div class="p-4 text-sm text-zinc-500">No items yet. Add files above.</div>'; return; }
+        App.items.forEach((it,idx)=>{ const row=tpl.content.cloneNode(true); const img=$('img',row); img.src=`data:${it.mime};base64,${it.data}`; const title=$$('input',row)[0]; title.value=it.title; title.oninput=e=>it.title=e.target.value; const rm=$('button',row); rm.onclick=()=>{App.items.splice(idx,1); renderAdminList();}; list.appendChild(row); });
       }
+      async function importJSON(text){ try{ const obj=JSON.parse(text); if(!Array.isArray(obj.items)) throw new Error('Invalid'); App.items=obj.items.map(x=>({ title:x.title||'Untitled', mime:x.mime||'image/jpeg', data:x.data })); renderAdminList(); setStatus(`Imported ${App.items.length}`); setTimeout(()=>setStatus(''),800);} catch(e){ alert('Import failed: '+(e.message||e)); } }
+      function exportJSON(){ if(!App.items.length) return alert('Nothing to export'); const out={ version:1, generatedAt:new Date().toISOString(), title:App.title, items:App.items }; const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='gallery.json'; a.click(); URL.revokeObjectURL(a.href); }
 
-      async function importJSON(text){
-        try {
-          const obj = JSON.parse(text);
-          if (!Array.isArray(obj.items)) throw new Error('Invalid file');
-          App.items = obj.items.map(x=>({ title: x.title||'Untitled', category: x.category||'', mime: x.mime||'image/jpeg', data: x.data }));
-          renderAdminList();
-          setStatus('Imported'); setTimeout(()=>setStatus(''), 800);
-        } catch (e) { alert('Import failed: ' + (e.message||e)); }
-      }
-
-      function exportJSON(){
-        if (!App.items.length) return alert('Nothing to export');
-        const out = { version: 1, generatedAt: new Date().toISOString(), title: App.title, items: App.items };
-        const blob = new Blob([JSON.stringify(out,null,2)], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'gallery.json';
-        a.click();
-        URL.revokeObjectURL(a.href);
-      }
-
-      // ---------- Viewer ----------
+      // ------------------------- Viewer -------------------------
       async function initViewer(){
         $('#viewerUI').classList.remove('hidden');
         $('#viewerBar').classList.remove('hidden');
         $('#appTitle').textContent = 'Portfolio';
-
-        // Controls
         $('#gridBtn').onclick = ()=>{ App.view='grid'; renderAll(); syncURL(); };
         $('#flipBtn').onclick = ()=>{ App.view='flip'; renderAll(); syncURL(); };
         window.addEventListener('keydown', (e)=>{ if (App.view==='flip'){ if (e.key==='ArrowLeft') step(-1); if (e.key==='ArrowRight') step(1); }});
-
-        // Disable right-click (basic deter)
-        document.addEventListener('contextmenu', (e)=> e.preventDefault());
-
-        // Try gallery.json first (embedded base64 images)
-        let loaded = false;
         try {
-          const res = await fetch('./gallery.json', { cache: 'no-store' });
-          if (res.ok) {
-            const json = await res.json();
-            App.title = json.title || 'Portfolio';
-            App.items = (json.items||[]).map(x=>({ title:x.title||'Untitled', category:x.category||'', src: `data:${x.mime||'image/jpeg'};base64,${x.data}` }));
-            $('#appTitle').textContent = App.title;
-            setBanner('');
-            setStatus(`Loaded ${App.items.length} images from gallery.json`);
-            loaded = true;
-          }
-        } catch (_) {}
-
-        // If not found or too big to upload, fall back to manifest.json (files in repo)
-        if (!loaded) {
-          try {
-            const res2 = await fetch('./manifest.json', { cache: 'no-store' });
-            if (!res2.ok) throw new Error('manifest missing');
-            const m = await res2.json();
-            App.title = m.title || 'Portfolio';
-            const items = [];
-            if (Array.isArray(m.categories)) {
-              for (const cat of m.categories) {
-                const cname = cat.name || cat.id || 'Uncategorized';
-                for (const it of (cat.items||[])) {
-                  items.push({ title: it.title || basename(it.src), category: cname, src: it.src });
-                }
-              }
-            } else if (Array.isArray(m.items)) {
-              for (const it of m.items) items.push({ title: it.title || basename(it.src), category: it.category || '', src: it.src });
-            }
-            App.items = items;
-            $('#appTitle').textContent = App.title;
-            setBanner('');
-            setStatus(`Loaded ${App.items.length} images`);
-            loaded = true;
-          } catch (_) {}
+          const res = await fetch('./gallery.json', { cache:'no-store' });
+          if (!res.ok) throw new Error('missing');
+          const json = await res.json();
+          App.title = json.title || 'Portfolio';
+          App.items = (json.items||[]).map(x=>({ title:x.title||'Untitled', src:`data:${x.mime||'image/jpeg'};base64,${x.data}` }));
+          $('#appTitle').textContent = App.title;
+          setBanner('');
+          setStatus(`Loaded ${App.items.length} images`);
+        } catch (e) {
+          setBanner('Could not find <code>gallery.json</code> in the repo root (same place as <code>index.html</code>). Use <code>?mode=admin</code> to export one, then upload it.');
+          setStatus('No data file found');
+          App.items=[];
         }
-
-        if (!loaded) {
-          setBanner('No <code>gallery.json</code> or <code>manifest.json</code> found. Option A: use <code>?mode=admin</code> to export <code>gallery.json</code>. Option B (recommended for many images): upload images to an <code>assets/</code> folder and add a small <code>manifest.json</code>.');
-          App.items = [];
-        }
-
         renderAll();
       }
-
-      function setBanner(html){
-        const b = $('#banner'); if (!html){ b.classList.add('hidden'); b.innerHTML=''; return; }
-        b.classList.remove('hidden'); b.innerHTML = html;
-      }
-
-      function categories(){
-        const set = new Set(); for (const it of App.items){ if (it.category) set.add(it.category); }
-        return ['all', ...[...set]];
-      }
-
-      function syncURL(){
-        const u=new URL(location); u.searchParams.set('mode','view'); u.searchParams.set('view', App.view==='flip'?'flip':'grid'); history.replaceState({},'',u);
-      }
-
-      function renderAll(){
-        renderTabs();
-        $('#gridBtn').classList.toggle('bg-[color:var(--brand)]/10', App.view==='grid');
-        $('#flipBtn').classList.toggle('bg-[color:var(--brand)]/10', App.view==='flip');
-        if (App.view==='grid') {
-          stopAutoplay();
-          $('#gridView').classList.remove('hidden');
-          $('#flipView').classList.add('hidden');
-          renderGrid();
-        } else {
-          $('#gridView').classList.add('hidden');
-          $('#flipView').classList.remove('hidden');
-          renderFlip();
-        }
-      }
-
-      function renderTabs(){
-        // Hide tabs (categories are admin-only)
-        const ct = $('#catTabs'); if (!ct) return; ct.classList.add('hidden'); ct.innerHTML='';
-      };
-          ct.appendChild(b);
-        });
-      }
-
-      function filtered(){ return App.filter==='all' ? App.items : App.items.filter(i=>i.category===App.filter); }
-
-      function renderGrid(){
-        const host = $('#gridView'); host.innerHTML='';
-        if (!App.items.length){ host.innerHTML = '<div class="text-sm text-zinc-500">No items to show.</div>'; return; }
-        // Always show a single flat grid (hide categories from viewers)
-        const grid = document.createElement('div'); grid.className='grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
-        App.items.forEach(it=>grid.appendChild(gridCard(it, '')));
-        host.appendChild(grid);
-      }
-        // If All: group by category
-        if (App.filter==='all'){
-          const groups = groupBy(App.items, x=>x.category||'Uncategorized');
-          for (const [cat, list] of groups){
-            const section = document.createElement('section');
-            section.innerHTML = `<h2 class=\"text-base font-semibold mb-2\">${escapeHtml(cat)}</h2>`;
-            const grid = document.createElement('div'); grid.className='grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
-            list.forEach(it=>grid.appendChild(gridCard(it, cat)));
-            section.appendChild(grid); host.appendChild(section);
-          }
-        } else {
-          const grid = document.createElement('div'); grid.className='grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
-          filtered().forEach(it=>grid.appendChild(gridCard(it, it.category||'Uncategorized')));
-          host.appendChild(grid);
-        }
-      }
-
-      function gridCard(it, cat){
-        const fig=document.createElement('figure'); fig.className='rounded-2xl overflow-hidden border bg-white';
-        const img=new Image(); img.src=it.src; img.alt=it.title||''; img.loading='lazy'; img.className='w-full h-48 object-cover bg-zinc-100'; img.draggable=false;
-        const cap=document.createElement('figcaption'); cap.className='p-2 text-sm font-medium text-zinc-800';
-        cap.innerHTML = `<span class="truncate" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</span>`;
-        fig.appendChild(img); fig.appendChild(cap); return fig;
-      }
-
-      // ---- Flipbook ----
-      let idx=0; let autoTimer=null; let autoMs=3000;
-      function renderFlip(){
-        const list = filtered();
-        App.flat = list;
-        if (!list.length){ $('#flipViewport').innerHTML='<div class="text-sm text-zinc-500">No items.</div>'; $('#flipMeta').textContent=''; return; }
-        if (idx>=list.length) idx=0;
-        showSlide();
-        // Autoplay controls
-        const playBtn = $('#playBtn');
-        const speedSel = $('#speedSel');
-        if (playBtn) playBtn.onclick = ()=>{ if (autoTimer) stopAutoplay(); else startAutoplay(); };
-        if (speedSel) speedSel.onchange = (e)=>{ autoMs = parseInt(e.target.value,10)||3000; if (autoTimer) startAutoplay(); };
-        $('#prevBtn').onclick = ()=>step(-1);
-        $('#nextBtn').onclick = ()=>step(1);
-        const vp=$('#flipViewport'); let sx=0,sy=0,tr=false; vp.onpointerdown=e=>{tr=true;sx=e.clientX;sy=e.clientY}; vp.onpointerup=e=>{ if(!tr)return; tr=false; const dx=e.clientX-sx,dy=e.clientY-sy; if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)) step(dx<0?1:-1); };
-      }
-      function startAutoplay(){ stopAutoplay(); autoTimer = setInterval(()=>step(1), autoMs); const b=$('#playBtn'); if (b) b.textContent='Pause'; }
-      function stopAutoplay(){ if (autoTimer){ clearInterval(autoTimer); autoTimer=null; } const b=$('#playBtn'); if (b) b.textContent='Play'; }
+      function setBanner(html){ const b=$('#banner'); if(!html){b.classList.add('hidden'); b.innerHTML=''; return;} b.classList.remove('hidden'); b.innerHTML=html; }
+      function syncURL(){ const u=new URL(location); u.searchParams.set('mode','view'); u.searchParams.set('view', App.view==='flip'?'flip':'grid'); history.replaceState({},'',u); }
+      function renderAll(){ $('#gridBtn').classList.toggle('bg-[color:var(--brand)]/10', App.view==='grid'); $('#flipBtn').classList.toggle('bg-[color:var(--brand)]/10', App.view==='flip'); if (App.view==='grid'){ stopAutoplay(); $('#gridView').classList.remove('hidden'); $('#flipView').classList.add('hidden'); renderGrid(); } else { $('#gridView').classList.add('hidden'); $('#flipView').classList.remove('hidden'); renderFlip(); } }
+      function renderGrid(){ const host=$('#gridView'); host.innerHTML=''; if(!App.items.length){ host.innerHTML='<div class="text-sm text-zinc-500">No items to show.</div>'; return; } const grid=document.createElement('div'); grid.className='grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'; App.items.forEach(it=>grid.appendChild(gridCard(it))); host.appendChild(grid); }
+      function gridCard(it){ const fig=document.createElement('figure'); fig.className='rounded-2xl overflow-hidden border bg-white'; const img=new Image(); img.src=it.src; img.alt=it.title||''; img.loading='lazy'; img.className='w-full h-48 object-cover bg-zinc-100'; img.draggable=false; const cap=document.createElement('figcaption'); cap.className='p-2 text-base font-medium text-zinc-900'; cap.innerHTML=`<span class="truncate" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</span>`; fig.appendChild(img); fig.appendChild(cap); return fig; }
+      let idx=0, autoTimer=null, autoMs=3000;
+      function renderFlip(){ const list=App.items; App.flat=list; if(!list.length){ $('#flipViewport').innerHTML='<div class="text-sm text-zinc-500">No items.</div>'; $('#flipMeta').textContent=''; return; } if(idx>=list.length) idx=0; showSlide(); $('#prevBtn').onclick=()=>step(-1); $('#nextBtn').onclick=()=>step(1); const playBtn=$('#playBtn'); const speedSel=$('#speedSel'); if(playBtn) playBtn.onclick=()=>{ if(autoTimer) stopAutoplay(); else startAutoplay(); }; if(speedSel) speedSel.onchange=(e)=>{ autoMs=parseInt(e.target.value,10)||3000; if(autoTimer) startAutoplay(); }; const vp=$('#flipViewport'); let sx=0,sy=0,tr=false; vp.onpointerdown=e=>{tr=true;sx=e.clientX;sy=e.clientY}; vp.onpointerup=e=>{ if(!tr)return; tr=false; const dx=e.clientX-sx,dy=e.clientY-sy; if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)) step(dx<0?1:-1); } }
+      function showSlide(){ const it=App.flat[idx]; const vp=$('#flipViewport'); vp.innerHTML=''; const img=new Image(); img.src=it.src; img.alt=it.title||''; img.className='max-w-full max-h-full rounded-lg shadow'; img.draggable=false; vp.appendChild(img); const meta=`${idx+1} / ${App.flat.length} • ${it.title}`; const metaEl=$('#flipMeta'); if(metaEl) metaEl.textContent=meta; }
+      function startAutoplay(){ stopAutoplay(); autoTimer=setInterval(()=>step(1), autoMs); const b=$('#playBtn'); if(b) b.textContent='Pause'; }
+      function stopAutoplay(){ if(autoTimer){ clearInterval(autoTimer); autoTimer=null; } const b=$('#playBtn'); if(b) b.textContent='Play'; }
       function step(d){ idx=(idx+d+App.flat.length)%App.flat.length; showSlide(); }
-      function showSlide(){
-        const it=App.flat[idx]; const vp=$('#flipViewport');
-        vp.innerHTML=''; const img=new Image(); img.src=it.src; img.alt=it.title||''; img.className='max-w-full max-h-full rounded-lg shadow'; img.draggable=false; vp.appendChild(img);
-        const meta = `${idx+1} / ${App.flat.length} • ${it.title}`;
-        const metaEl = $('#flipMeta'); if (metaEl) metaEl.textContent = meta;
-      } / ${App.flat.length} • ${it.title}${it.category? ' • '+it.category:''}`;
-      }
 
-      // ---------- Utils ----------
+      // -------- Utils --------
       function setStatus(msg){ status.textContent = msg||''; }
       function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
       function stripExt(n){ return n.replace(/\.[^.]+$/, '').replace(/[-_]+/g,' ').trim(); }
       function fileToDataURL(file){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(file); }); }
       function splitDataUrl(dataUrl){ const m=String(dataUrl).match(/^data:([^;]+);base64,(.*)$/); return [m?.[1]||'image/jpeg', m?.[2]||'']; }
-      function toSrc(it){ return `data:${it.mime};base64,${it.data}`; }
-      function groupBy(arr, keyFn){ const m=new Map(); for(const x of arr){ const k=keyFn(x); if(!m.has(k)) m.set(k,[]); m.get(k).push(x);} return m; }
     </script>
   </body>
 </html>
