@@ -28,9 +28,9 @@ tailwind={}; tailwind.config={ theme:{ extend:{ colors:{ brand:{ purple:'#8D6CE5
     <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b" style="border-color:var(--brand)">
       <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col gap-3">
         <!-- Centered logo + title -->
-        <div class="flex items-center justify-center gap-3">
+        <div class="flex flex-col items-center justify-center gap-2">
           <img src="https://cdn.shopify.com/s/files/1/0659/3023/2034/files/LogowithWebsite_3b736bf3-8f06-4553-bed2-68878cd7395a.png?v=1757448093" alt="Diesel Designs" class="h-16 w-auto" />
-          <h1 id="appTitle" class="text-2xl font-semibold tracking-tight">Webkit Options</h1>
+          <h1 id="appTitle" class="text-2xl font-semibold tracking-tight text-center">Webkit Options</h1>
         </div>
         <!-- Controls row -->
         <div class="flex items-center justify-between">
@@ -209,7 +209,11 @@ tailwind={}; tailwind.config={ theme:{ extend:{ colors:{ brand:{ purple:'#8D6CE5
       function step(d){ idx=(idx+d+App.flat.length)%App.flat.length; showSlide(); }
 
       // -------- Utils --------
-      function setStatus(msg){ status.textContent = msg||''; }
+      function setStatus(msg){
+        // Show status messages only in Admin mode
+        if (mode === 'admin') { status.textContent = msg || ''; }
+        else { status.textContent = ''; }
+      }
       function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
       function stripExt(n){ return n.replace(/\.[^.]+$/, '').replace(/[-_]+/g,' ').trim(); }
       function fileToDataURL(file){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(file); }); }
