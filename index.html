@@ -25,7 +25,7 @@ Workflow:
   <body class="min-h-screen bg-zinc-50 text-zinc-900">
     <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b-2 border-[color:var(--brand)]">
       <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
-        <div class="w-8 h-8 rounded-xl grid place-items-center font-bold text-white" style="background:var(--brand);">DD</div>
+        <img src="https://cdn.shopify.com/s/files/1/0659/3023/2034/files/LogowithWebsite_3b736bf3-8f06-4553-bed2-68878cd7395a.png?v=1757448093" alt="Diesel Designs" class="h-8 w-auto" />
         <h1 id="appTitle" class="text-lg font-semibold tracking-tight">Portfolio</h1>
         <span id="status" class="text-xs text-zinc-500"></span>
         <div id="adminBar" class="ml-auto hidden items-center gap-2">
@@ -82,7 +82,7 @@ Workflow:
             <div id="flipViewport" class="w-full h-[60vh] md:h-[65vh] lg:h-[70vh] grid place-items-center bg-zinc-50 no-select"></div>
             <button id="prevBtn" class="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white px-3 py-2 rounded-xl border shadow">‹</button>
             <button id="nextBtn" class="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white px-3 py-2 rounded-xl border shadow">›</button>
-            <div class="absolute left-2 bottom-2 bg-white/90 px-2 py-1 rounded-lg text-xs" id="flipMeta"></div>
+            <div class="absolute left-2 bottom-2 bg-white/90 px-2 py-1 rounded-lg text-sm font-medium" id="flipMeta"></div>
             <select id="speedSel" class="absolute right-28 bottom-2 bg-white/90 border rounded-lg px-2 py-1 text-xs">
               <option value="2000">2s</option>
               <option value="3000" selected>3s</option>
@@ -96,7 +96,7 @@ Workflow:
     </main>
 
     <footer class="max-w-6xl mx-auto px-4 py-8 text-center text-xs text-zinc-500">
-      © <span id="year"></span> Diesel Designs
+      © <span id="year"></span> Your Name
     </footer>
 
     <template id="itemRowTpl">
@@ -306,13 +306,9 @@ Workflow:
       }
 
       function renderTabs(){
-        const ct = $('#catTabs'); ct.innerHTML='';
-        const cats = categories();
-        cats.forEach(c=>{
-          const b=document.createElement('button');
-          const active = (App.filter===c) || (App.filter==='all' && c==='all');
-          b.className = 'px-3 py-1.5 text-sm rounded-xl border ' + (active? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white hover:bg-zinc-50');
-          b.textContent = c==='all' ? 'All' : c; b.onclick = ()=>{ App.filter=c; renderAll(); };
+        // Hide tabs (categories are admin-only)
+        const ct = $('#catTabs'); if (!ct) return; ct.classList.add('hidden'); ct.innerHTML='';
+      };
           ct.appendChild(b);
         });
       }
@@ -322,6 +318,11 @@ Workflow:
       function renderGrid(){
         const host = $('#gridView'); host.innerHTML='';
         if (!App.items.length){ host.innerHTML = '<div class="text-sm text-zinc-500">No items to show.</div>'; return; }
+        // Always show a single flat grid (hide categories from viewers)
+        const grid = document.createElement('div'); grid.className='grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
+        App.items.forEach(it=>grid.appendChild(gridCard(it, '')));
+        host.appendChild(grid);
+      }
         // If All: group by category
         if (App.filter==='all'){
           const groups = groupBy(App.items, x=>x.category||'Uncategorized');
@@ -341,9 +342,9 @@ Workflow:
 
       function gridCard(it, cat){
         const fig=document.createElement('figure'); fig.className='rounded-2xl overflow-hidden border bg-white';
-        const img=new Image(); img.src=it.src; img.alt=it.title||''; img.loading='lazy'; img.className='w-full h-48 object-cover bg-zinc-100';
-        const cap=document.createElement('figcaption'); cap.className='p-2 text-xs text-zinc-600 flex items-center justify-between';
-        cap.innerHTML = `<span class=\"truncate\" title=\"${escapeHtml(it.title)}\">${escapeHtml(it.title)}</span><span class=\"text-zinc-400\">${escapeHtml(cat)}</span>`;
+        const img=new Image(); img.src=it.src; img.alt=it.title||''; img.loading='lazy'; img.className='w-full h-48 object-cover bg-zinc-100'; img.draggable=false;
+        const cap=document.createElement('figcaption'); cap.className='p-2 text-sm font-medium text-zinc-800';
+        cap.innerHTML = `<span class="truncate" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</span>`;
         fig.appendChild(img); fig.appendChild(cap); return fig;
       }
 
@@ -369,8 +370,10 @@ Workflow:
       function step(d){ idx=(idx+d+App.flat.length)%App.flat.length; showSlide(); }
       function showSlide(){
         const it=App.flat[idx]; const vp=$('#flipViewport');
-        vp.innerHTML=''; const img=new Image(); img.src=it.src; img.draggable=false; img.alt=it.title||''; img.className='max-w-full max-h-full rounded-lg shadow'; vp.appendChild(img);
-        $('#flipMeta').textContent=`${idx+1} / ${App.flat.length} • ${it.title}${it.category? ' • '+it.category:''}`;
+        vp.innerHTML=''; const img=new Image(); img.src=it.src; img.alt=it.title||''; img.className='max-w-full max-h-full rounded-lg shadow'; img.draggable=false; vp.appendChild(img);
+        const meta = `${idx+1} / ${App.flat.length} • ${it.title}`;
+        const metaEl = $('#flipMeta'); if (metaEl) metaEl.textContent = meta;
+      } / ${App.flat.length} • ${it.title}${it.category? ' • '+it.category:''}`;
       }
 
       // ---------- Utils ----------
