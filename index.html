@@ -238,6 +238,7 @@ Workflow:
             App.items = (json.items||[]).map(x=>({ title:x.title||'Untitled', category:x.category||'', src: `data:${x.mime||'image/jpeg'};base64,${x.data}` }));
             $('#appTitle').textContent = App.title;
             setBanner('');
+            setStatus(`Loaded ${App.items.length} images from gallery.json`);
             loaded = true;
           }
         } catch (_) {}
@@ -263,6 +264,7 @@ Workflow:
             App.items = items;
             $('#appTitle').textContent = App.title;
             setBanner('');
+            setStatus(`Loaded ${App.items.length} images`);
             loaded = true;
           } catch (_) {}
         }
